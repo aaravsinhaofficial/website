@@ -133,6 +133,141 @@ h2 {
   border-radius: 50%;
 }
 
+.featured-post-banner {
+  display: block;
+  padding: 18px 20px;
+  border: 1px solid #e8cc78;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #fffad7 0%, #ffe7a8 100%);
+  box-shadow: 0 10px 24px rgba(120, 92, 18, 0.08);
+  color: inherit;
+  transition: transform .2s ease-in-out, box-shadow .2s ease-in-out, border-color .2s ease-in-out;
+}
+
+.featured-post-banner:hover,
+.featured-post-banner:focus {
+  color: inherit;
+  border-color: #f09228;
+  box-shadow: 0 14px 28px rgba(120, 92, 18, 0.14);
+  transform: translateY(-1px);
+}
+
+.featured-post-kicker,
+.featured-post-title,
+.featured-post-summary,
+.featured-post-cta {
+  display: block;
+}
+
+.featured-post-kicker {
+  margin-bottom: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9a6200;
+}
+
+.featured-post-title {
+  margin-bottom: 8px;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.featured-post-summary {
+  color: #4f4a3f;
+  line-height: 1.6;
+}
+
+.featured-post-cta {
+  margin-top: 12px;
+  font-weight: 700;
+}
+
+.signup-section {
+  padding: 22px 24px;
+  border: 1px solid #d7ccbb;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #f7f2e4 0%, #fffaf0 100%);
+  box-shadow: 0 10px 24px rgba(70, 56, 26, 0.06);
+}
+
+.signup-kicker {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8e6b18;
+}
+
+.signup-title {
+  margin: 0;
+}
+
+.signup-copy {
+  margin: 8px 0 16px;
+  color: #4f4a3f;
+  line-height: 1.6;
+}
+
+.signup-label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+.signup-form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.signup-input {
+  flex: 1 1 240px;
+  padding: 12px 14px;
+  border: 1px solid #c9bfaf;
+  border-radius: 999px;
+  background-color: #fffdf8;
+  color: #222;
+  font: inherit;
+}
+
+.signup-button {
+  padding: 12px 18px;
+  border: 0;
+  border-radius: 999px;
+  background-color: #1772d0;
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color .2s ease-in-out, transform .2s ease-in-out;
+}
+
+.signup-button:hover,
+.signup-button:focus {
+  background-color: #0f5cad;
+  transform: translateY(-1px);
+}
+
+.signup-note {
+  margin: 12px 0 0;
+  color: #6a655a;
+  font-size: 13px;
+}
+
+@media (max-width: 640px) {
+  .signup-form-row {
+    flex-direction: column;
+  }
+
+  .signup-input,
+  .signup-button {
+    width: 100%;
+  }
+}
+
 .one {
   width: 160px;
   height: 160px;
