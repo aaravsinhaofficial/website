@@ -113,6 +113,20 @@ h2 {
   font-size: 32px;
 }
 
+.profile-photo-link {
+  display: block;
+  width: 100%;
+}
+
+.profile-photo {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  object-position: center;
+  border-radius: 50%;
+}
+
 .one {
   width: 160px;
   height: 160px;
