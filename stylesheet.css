@@ -84,6 +84,10 @@ a {
   font-size: 14px;
 }
 
+body {
+  background-color: #f0eee6;
+}
+
 strong {
   font-family: 'Lato', Verdana, Helvetica, sans-serif;
   font-size: 14px;
