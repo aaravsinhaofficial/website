@@ -120,6 +120,8 @@ h2 {
 .profile-photo-link {
   display: inline-block;
   width: min(100%, 260px);
+  overflow: hidden;
+  border-radius: 50%;
 }
 
 .profile-photo {

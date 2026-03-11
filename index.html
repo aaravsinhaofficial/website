@@ -48,7 +48,7 @@
                 </p>
               </td>
               <td class="profile-cell" style="padding:2.5%;width:37%;max-width:37%">
-                <a class="profile-photo-link" href="images/profile.jpg">
+                <a class="profile-photo-link" data-secret-href="skibidi/index.html" href="images/profile.jpg">
                   <img class="profile-photo" alt="profile photo" src="images/profile.jpg">
                 </a>
               </td>
@@ -219,5 +219,32 @@
         </td>
       </tr>
     </table>
+    <script>
+      (function () {
+        var profileLink = document.querySelector('.profile-photo-link');
+        if (!profileLink) {
+          return;
+        }
+
+        profileLink.addEventListener('click', function (event) {
+          var rect = profileLink.getBoundingClientRect();
+          var radius = Math.min(rect.width, rect.height) / 2;
+          var centerX = rect.left + (rect.width / 2);
+          var centerY = rect.top + (rect.height / 2);
+          var dx = event.clientX - centerX;
+          var dy = event.clientY - centerY;
+
+          if ((dx * dx) + (dy * dy) > (radius * radius)) {
+            event.preventDefault();
+            return;
+          }
+
+          if (dy < 0) {
+            event.preventDefault();
+            window.location.href = profileLink.dataset.secretHref;
+          }
+        });
+      }());
+    </script>
   </body>
 </html>
