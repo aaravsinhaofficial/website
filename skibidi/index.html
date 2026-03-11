@@ -1,0 +1,47 @@
+<!DOCTYPE HTML>
+<html lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>You found it.</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+      * { margin: 0; padding: 0; }
+      body {
+        background: #000;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        flex-direction: column;
+        font-family: 'Lato', Verdana, Helvetica, sans-serif;
+        overflow: hidden;
+      }
+      img {
+        max-width: 100%;
+        max-height: 80vh;
+        border-radius: 8px;
+      }
+      .text {
+        color: #fff;
+        margin-top: 20px;
+        font-size: 14px;
+        opacity: 0;
+        animation: fade-in 2s ease 1.5s forwards;
+      }
+      .text a {
+        color: #6c9bff;
+        text-decoration: none;
+      }
+      .text a:hover {
+        color: #f09228;
+      }
+      @keyframes fade-in {
+        to { opacity: 1; }
+      }
+    </style>
+  </head>
+  <body>
+    <img src="https://media1.tenor.com/m/x8v1oNUOiqgAAAAd/rickroll-roll.gif" alt="You just got rickrolled">
+    <p class="text">You've been rickrolled. <a href="../index.html">Go back</a></p>
+  </body>
+</html>
