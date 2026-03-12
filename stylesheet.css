@@ -185,20 +185,11 @@ h2 {
 }
 
 .cv-section {
-  padding: 22px 24px;
-  border: 1px solid #cbd7eb;
-  border-radius: 16px;
-  background: linear-gradient(135deg, #eef5ff 0%, #f8fbff 100%);
-  box-shadow: 0 10px 24px rgba(28, 63, 113, 0.08);
+  padding: 0;
 }
 
 .cv-kicker {
-  margin: 0 0 6px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #335b9a;
+  display: none;
 }
 
 .cv-title {
@@ -207,7 +198,6 @@ h2 {
 
 .cv-copy {
   margin: 8px 0 16px;
-  color: #4c5970;
   line-height: 1.6;
 }
 
@@ -233,20 +223,11 @@ h2 {
 }
 
 .signup-section {
-  padding: 22px 24px;
-  border: 1px solid #d7ccbb;
-  border-radius: 16px;
-  background: linear-gradient(135deg, #f7f2e4 0%, #fffaf0 100%);
-  box-shadow: 0 10px 24px rgba(70, 56, 26, 0.06);
+  padding: 0;
 }
 
 .signup-kicker {
-  margin: 0 0 6px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #8e6b18;
+  display: none;
 }
 
 .signup-title {
@@ -255,7 +236,6 @@ h2 {
 
 .signup-copy {
   margin: 8px 0 16px;
-  color: #4f4a3f;
   line-height: 1.6;
 }
 
@@ -297,12 +277,6 @@ h2 {
 .signup-button:focus {
   background-color: #0f5cad;
   transform: translateY(-1px);
-}
-
-.signup-note {
-  margin: 12px 0 0;
-  color: #6a655a;
-  font-size: 13px;
 }
 
 @media (max-width: 640px) {

@@ -28,7 +28,6 @@
     form.addEventListener('submit', function (event) {
       var recipient = form.getAttribute('action').replace(/^mailto:/, '');
       var emailInput = form.querySelector('.signup-input');
-      var note = form.querySelector('[data-signup-note]');
       var email;
       var subject;
       var body;
@@ -59,10 +58,6 @@
       window.location.href = 'mailto:' + recipient +
         '?subject=' + encodeURIComponent(subject) +
         '&body=' + encodeURIComponent(body);
-
-      if (note) {
-        note.textContent = 'Email draft opened. Send it and I will add you to the list.';
-      }
     });
   }
 
