@@ -253,6 +253,9 @@ h2 {
 
 .signup-input {
   flex: 1 1 240px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   padding: 12px 14px;
   border: 1px solid #c9bfaf;
   border-radius: 999px;
@@ -262,6 +265,8 @@ h2 {
 }
 
 .signup-button {
+  max-width: 100%;
+  box-sizing: border-box;
   padding: 12px 18px;
   border: 0;
   border-radius: 999px;
