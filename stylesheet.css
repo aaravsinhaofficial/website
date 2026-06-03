@@ -85,7 +85,7 @@ a {
 }
 
 body {
-  background-color: #f0eee6;
+  background-color: #f7f7f7;
 }
 
 strong {
@@ -104,6 +104,16 @@ h2 {
   font-family: 'Lato', Verdana, Helvetica, sans-serif;
   font-size: 14px;
   font-weight: 700;
+}
+
+.paper-links,
+.paper-links a {
+  font-size: 13px;
+}
+
+.paper-links {
+  display: inline-block;
+  margin-top: 4px;
 }
 
 .name {
@@ -337,5 +347,5 @@ h2 {
 }
 
 span.highlight {
-  background-color: #ffffd0;
+  background-color: transparent;
 }
