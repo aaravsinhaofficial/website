@@ -262,6 +262,7 @@
 
     document.body.appendChild(chatbot);
     appendMessage('assistant', "Hi, I am Aarav's site assistant.", false);
+    setOpen(false);
 
     toggle.addEventListener('click', function () {
       setOpen(panel.hidden);
