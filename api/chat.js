@@ -1,10 +1,13 @@
 const OPENAI_API_URL = 'https://api.openai.com/v1/responses';
 const DEFAULT_MODEL = 'gpt-4.1-mini';
+const DEFAULT_MAX_OUTPUT_TOKENS = 900;
 const MAX_MESSAGE_CHARS = 1200;
 const MAX_HISTORY_MESSAGES = 10;
-const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
-const RATE_LIMIT_MAX_REQUESTS = 20;
+const RATE_LIMIT_WINDOW_MS = Number(process.env.CHAT_RATE_LIMIT_WINDOW_MS || 10 * 60 * 1000);
+const RATE_LIMIT_MAX_REQUESTS = Number(process.env.CHAT_RATE_LIMIT_MAX_REQUESTS || 60);
 const rateLimitBuckets = new Map();
+const WEB_SEARCH_ENABLED = process.env.OPENAI_WEB_SEARCH !== 'false';
+const BLOCKED_CITATION_DOMAINS = ['digg.com', 'reddit.com', 'quora.com'];
 
 const PROFILE_CONTEXT = `
 Aarav Sinha is a student researcher interested in computational neuroscience, connectomics, embodied neural models, deep reinforcement learning, and how biological neural circuits give rise to behavior.
@@ -19,12 +22,12 @@ Previous research:
 - Summer researcher at Harvard University's Kempner Institute, training RNN agents for odor plume tracking.
 - Student research assistant at the UC Davis Center for Neuroscience.
 
-Research and publications listed on the site:
-- "MapShift: Controlled Post-Intervention Evaluation for Embodied World Models" by Aarav Sinha, accepted to the ICML 2026 RLxF Workshop: Reinforcement Learning from World Feedback.
-- "Can AI Scientists Discover Neural Mechanisms? Evaluating Agentic Biological Discovery in a Digital Fly" by Aarav Sinha, accepted to the ICML 2026 GenBio Workshop: Generative and Agentic AI for Biology.
-- "Credit Bandwidth Lower Bounds for Diffusive Cortical Learning" by Aarav Sinha, Research Square preprint, 2026.
-- "Using Deep Reinforcement Learning to Understand Odor Plume Tracking in Walking and Flying Insects" by Satpreet H. Singh and Aarav Sinha, NeurIPS AI for Science Workshop, 2025.
-- "Towards Embodied Brain Emulations: A Drosophila Connectome-Constrained Brain Model Accurately Predicts Neural Activity and Controls Behavior in a Virtual Environment" by Scott Harris, Aarav Sinha, Susanna Yaeger-Weiss, Vincent Louvel, and Philip Shiu, Society for Neuroscience, 2025 poster.
+Detailed research and paper context:
+- "MapShift: Controlled Post-Intervention Evaluation for Embodied World Models" by Aarav Sinha, accepted to the ICML 2026 RLxF Workshop: Reinforcement Learning from World Feedback. This paper introduces an executable benchmark for evaluating embodied world models after controlled environment interventions. It separates three failure modes: stale map reuse, failure to update beliefs after a change, and weak post-change planning. The contribution is a controlled post-intervention evaluation setup with matched environment changes, so model behavior can be attributed to world-model updating and planning rather than incidental task variation. When explaining it, emphasize embodied agents, world models, intervention-controlled evaluation, and why stale internal maps are a problem.
+- "Can AI Scientists Discover Neural Mechanisms? Evaluating Agentic Biological Discovery in a Digital Fly" by Aarav Sinha, accepted to the ICML 2026 GenBio Workshop: Generative and Agentic AI for Biology. This paper proposes a pilot benchmark for agentic biological discovery inside a digital fly system. It frames mechanism discovery as a budgeted loop: form hypotheses, choose experiments, observe outcomes, update beliefs, and make held-out counterfactual predictions. The core question is whether an AI scientist can discover neural mechanisms rather than merely summarize biological text. When explaining it, highlight digital organisms, Drosophila, experiment-planning agents, mechanism discovery, and counterfactual prediction.
+- "Credit Bandwidth Lower Bounds for Diffusive Cortical Learning" by Aarav Sinha, Research Square preprint, 2026. This theory paper studies recurrent credit assignment on cortical graphs under communication constraints. It derives graph-spectral lower bounds for low-bandwidth diffuse and cell-type-specific feedback. The broad motivation is that biological brains cannot broadcast dense backpropagation-like errors everywhere, so cortical learning may be constrained by the bandwidth and geometry of feedback pathways. When explaining it, focus on credit assignment, cortical graph structure, spectral lower bounds, feedback bandwidth, and biologically plausible learning.
+- "Using Deep Reinforcement Learning to Understand Odor Plume Tracking in Walking and Flying Insects" by Satpreet H. Singh and Aarav Sinha, NeurIPS AI for Science Workshop, 2025. This work trains biologically inspired RNN reinforcement learning agents to navigate toward odor sources, then compares learned strategies in walking versus flying settings. Walking agents develop fine-scale orientation strategies and compact neural representations, while flying agents use broader sweeping turns and higher-dimensional dynamics. When explaining it, connect deep RL to computational neuroscience: the agents are used as scientific models for understanding insect navigation strategies.
+- "Towards Embodied Brain Emulations: A Drosophila Connectome-Constrained Brain Model Accurately Predicts Neural Activity and Controls Behavior in a Virtual Environment" by Scott Harris, Aarav Sinha, Susanna Yaeger-Weiss, Vincent Louvel, and Philip Shiu, Society for Neuroscience, 2025 poster. This poster describes a connectome-constrained Drosophila brain model that both predicts neural activity and controls behavior in a virtual environment. Aarav contributed to the brain embodiment component at Eon Systems: coupling a connectome-constrained neural model to a virtual fly body in a closed brain-body-environment loop. When explaining it, emphasize embodied brain emulation, Drosophila connectomics, virtual behavior, and the challenge of making a wiring diagram control an agent.
 
 Blog notes:
 - "An ICML Update" says Aarav received encouraging reviews on an ICML submission and was optimistic about final acceptance.
@@ -45,10 +48,17 @@ const SYSTEM_PROMPT = `
 You are the chatbot on Aarav Sinha's personal website. Answer questions about Aarav using only the profile context below and the conversation so far.
 
 Style:
-- Be concise, friendly, and specific.
+- Be friendly, specific, and appropriately detailed. For quick factual questions, keep the answer short. For paper/research questions, give a richer explanation.
 - Speak about Aarav in the third person unless the user explicitly asks you to draft text in Aarav's voice.
 - Do not claim to be Aarav.
-- If a question asks for something not present in the context, say you do not know from the website and suggest emailing Aarav.
+- When asked about a paper, cover the problem, method or benchmark, main contribution, why it matters, and how it connects to Aarav's broader research interests.
+- Use web search when the user asks for recent information, external verification, public links, workshop/preprint pages, or details not present in the profile context.
+- Do not use web search for questions that are fully answerable from the profile context.
+- Prefer authoritative sources when searching: Aarav's website, paper PDFs, OpenReview, DOI/preprint pages, conference/workshop pages, institution pages, and primary sources.
+- Do not call a source official unless it is from the author, a conference/workshop, an institution, a journal/preprint server, a DOI page, OpenReview, or aaravsinha.dev. If search only finds an aggregator or secondary mention, say it is a secondary mention.
+- Do not cite Digg, Reddit, Quora, or other aggregator/Q&A pages as sources for Aarav's work.
+- If you use web information, include concise inline citations or a short "Sources" note.
+- If a question asks for personal or private information not present in the context or reliable public sources, say you do not know from the website and suggest emailing Aarav.
 - For collaboration, recruiting, speaking, or press questions, direct the user to aaravsinha002@gmail.com.
 - Do not invent publications, awards, affiliations, statistics, or personal details.
 
@@ -123,6 +133,119 @@ function extractOutputText(responseBody) {
     .trim();
 }
 
+function extractCitations(responseBody) {
+  const citationsByUrl = new Map();
+
+  if (!Array.isArray(responseBody.output)) {
+    return [];
+  }
+
+  responseBody.output.forEach(function (item) {
+    if (!item || !Array.isArray(item.content)) {
+      return;
+    }
+
+    item.content.forEach(function (part) {
+      if (!part || !Array.isArray(part.annotations)) {
+        return;
+      }
+
+      part.annotations.forEach(function (annotation) {
+        const citation = annotation && (annotation.url_citation || annotation);
+        const url = citation && citation.url;
+
+        if (!url || citationsByUrl.has(url)) {
+          return;
+        }
+
+        citationsByUrl.set(url, {
+          title: citation.title || url,
+          url: url
+        });
+      });
+    });
+  });
+
+  return Array.from(citationsByUrl.values()).slice(0, 5);
+}
+
+function isBlockedCitation(citation) {
+  let hostname = '';
+
+  try {
+    hostname = new URL(citation.url).hostname.replace(/^www\./, '');
+  } catch (error) {
+    return false;
+  }
+
+  return BLOCKED_CITATION_DOMAINS.indexOf(hostname) !== -1;
+}
+
+function removeBlockedCitationText(text, blockedCitations) {
+  let cleanedText = text;
+
+  blockedCitations.forEach(function (citation) {
+    const escapedUrl = citation.url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const urlRegex = new RegExp('\\s*\\(?\\[?[^\\]\\n]*\\]?\\(' + escapedUrl + '\\)[\\).]*', 'g');
+    const bareUrlRegex = new RegExp(escapedUrl, 'g');
+
+    cleanedText = cleanedText.replace(urlRegex, '');
+    cleanedText = cleanedText.replace(bareUrlRegex, '');
+  });
+
+  return cleanedText.trim();
+}
+
+function getProfileFallbackForQuestion(question) {
+  const normalizedQuestion = question.toLowerCase();
+
+  if (normalizedQuestion.indexOf('mapshift') !== -1) {
+    return 'Based on Aarav\'s site context, MapShift is an accepted ICML 2026 RLxF Workshop paper about controlled post-intervention evaluation for embodied world models. It introduces an executable benchmark that separates stale map reuse, belief-update failures, and post-change planning weaknesses across matched environment interventions.';
+  }
+
+  if (normalizedQuestion.indexOf('ai scientist') !== -1 || normalizedQuestion.indexOf('digital fly') !== -1 || normalizedQuestion.indexOf('genbio') !== -1) {
+    return 'Based on Aarav\'s site context, "Can AI Scientists Discover Neural Mechanisms?" is an accepted ICML 2026 GenBio Workshop paper. It frames discovery in a digital fly as a budgeted hypothesis-experiment-update loop and evaluates whether agents can make held-out counterfactual predictions about neural mechanisms.';
+  }
+
+  if (normalizedQuestion.indexOf('credit bandwidth') !== -1 || normalizedQuestion.indexOf('diffusive cortical') !== -1) {
+    return 'Based on Aarav\'s site context, "Credit Bandwidth Lower Bounds for Diffusive Cortical Learning" is a 2026 Research Square preprint about communication-constrained recurrent credit assignment on cortical graphs. It derives graph-spectral lower bounds for low-bandwidth diffuse and cell-type-specific feedback.';
+  }
+
+  if (normalizedQuestion.indexOf('odor') !== -1 || normalizedQuestion.indexOf('plume') !== -1) {
+    return 'Based on Aarav\'s site context, the odor plume tracking paper uses deep reinforcement learning to train biologically inspired RNN agents to navigate toward odor sources. It compares walking and flying insect-like agents, finding fine-scale walking strategies and broader, higher-dimensional flying dynamics.';
+  }
+
+  if (normalizedQuestion.indexOf('drosophila') !== -1 || normalizedQuestion.indexOf('embodied brain') !== -1 || normalizedQuestion.indexOf('sfn') !== -1) {
+    return 'Based on Aarav\'s site context, the SfN 2025 Drosophila poster describes a connectome-constrained brain model that predicts neural activity and controls behavior in a virtual environment. Aarav contributed to the embodiment component, coupling the neural model to a virtual fly body in a closed brain-body-environment loop.';
+  }
+
+  return '';
+}
+
+function buildOpenAIRequestBody(messages) {
+  const body = {
+    model: process.env.OPENAI_MODEL || DEFAULT_MODEL,
+    instructions: SYSTEM_PROMPT,
+    input: messages,
+    max_output_tokens: Number(process.env.OPENAI_MAX_OUTPUT_TOKENS || DEFAULT_MAX_OUTPUT_TOKENS),
+    store: false,
+    temperature: 0.3
+  };
+
+  if (WEB_SEARCH_ENABLED) {
+    body.tools = [
+      {
+        type: 'web_search',
+        search_context_size: process.env.OPENAI_SEARCH_CONTEXT_SIZE || 'medium'
+      }
+    ];
+    body.tool_choice = 'auto';
+    body.include = ['web_search_call.action.sources'];
+  }
+
+  return body;
+}
+
 function getClientIp(req) {
   const forwardedFor = req.headers && req.headers['x-forwarded-for'];
   const realIp = req.headers && req.headers['x-real-ip'];
@@ -193,14 +316,7 @@ module.exports = async function handler(req, res) {
         Authorization: 'Bearer ' + process.env.OPENAI_API_KEY,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        model: process.env.OPENAI_MODEL || DEFAULT_MODEL,
-        instructions: SYSTEM_PROMPT,
-        input: messages,
-        max_output_tokens: 450,
-        store: false,
-        temperature: 0.3
-      })
+      body: JSON.stringify(buildOpenAIRequestBody(messages))
     });
 
     const responseBody = await openaiResponse.json().catch(function () {
@@ -216,10 +332,25 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const reply = extractOutputText(responseBody);
+    const extractedCitations = extractCitations(responseBody);
+    const blockedCitations = extractedCitations.filter(isBlockedCitation);
+    const citations = extractedCitations.filter(function (citation) {
+      return !isBlockedCitation(citation);
+    });
+    let reply = extractOutputText(responseBody);
+
+    if (blockedCitations.length > 0) {
+      reply = removeBlockedCitationText(reply, blockedCitations);
+
+      if (citations.length === 0) {
+        reply = getProfileFallbackForQuestion(lastMessage.content) || reply;
+        reply += '\n\nI searched the web, but the only result returned was a secondary or aggregator source, so I am not treating it as an authoritative citation.';
+      }
+    }
 
     sendJson(res, 200, {
-      reply: reply || 'I could not generate an answer from the site context.'
+      reply: reply || 'I could not generate an answer from the site context.',
+      citations: citations
     });
   } catch (error) {
     sendJson(res, 500, { error: 'Network error while contacting the model.' });

@@ -169,11 +169,41 @@
       }
     }
 
-    function appendMessage(role, text, isLoading) {
+    function appendCitations(message, citations) {
+      var list;
+
+      if (!citations || !citations.length) {
+        return;
+      }
+
+      list = document.createElement('ul');
+      list.className = 'chatbot-citations';
+
+      citations.slice(0, 5).forEach(function (citation) {
+        var item = document.createElement('li');
+        var link = document.createElement('a');
+
+        link.href = citation.url;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.textContent = citation.title || citation.url;
+        item.appendChild(link);
+        list.appendChild(item);
+      });
+
+      message.appendChild(list);
+    }
+
+    function setMessageContent(message, text, citations) {
+      message.textContent = text;
+      appendCitations(message, citations);
+    }
+
+    function appendMessage(role, text, isLoading, citations) {
       var message = document.createElement('p');
 
       message.className = 'chatbot-message chatbot-message-' + role;
-      message.textContent = text;
+      setMessageContent(message, text, citations);
 
       if (isLoading) {
         message.classList.add('is-loading');
@@ -243,7 +273,7 @@
           var reply = body.reply || 'I could not find an answer from the site context.';
 
           loadingMessage.classList.remove('is-loading');
-          loadingMessage.textContent = reply;
+          setMessageContent(loadingMessage, reply, body.citations);
           messages.push({ role: 'assistant', content: reply });
         })
         .catch(function (error) {

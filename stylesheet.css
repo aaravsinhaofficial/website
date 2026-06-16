@@ -454,6 +454,20 @@ h2 {
   color: #9a2c2c;
 }
 
+.chatbot-citations {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
+.chatbot-citations,
+.chatbot-citations a {
+  font-size: 12px;
+}
+
+.chatbot-citations li {
+  margin-top: 4px;
+}
+
 .chatbot-prompts {
   display: flex;
   gap: 8px;
