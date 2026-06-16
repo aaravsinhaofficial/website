@@ -8,6 +8,21 @@ const RATE_LIMIT_MAX_REQUESTS = Number(process.env.CHAT_RATE_LIMIT_MAX_REQUESTS 
 const rateLimitBuckets = new Map();
 const WEB_SEARCH_ENABLED = process.env.OPENAI_WEB_SEARCH !== 'false';
 const BLOCKED_CITATION_DOMAINS = ['digg.com', 'reddit.com', 'quora.com'];
+const ALLOWED_CITATION_PATTERNS = [
+  /aaravsinha\.dev/i,
+  /github\.com\/aaravsinhaofficial/i,
+  /linkedin\.com\/in\/aaravsinha1/i,
+  /scholar\.google\.com\/citations\?user=pQ0MDVw/i,
+  /openreview\.net\/forum\?id=gKQRv49qtM/i,
+  /doi\.org\/10\.21203\/rs\.3\.rs-9841779\/v1/i,
+  /researchsquare\.com\/article\/rs-9841779/i,
+  /genbio-workshop\.github\.io/i,
+  /sites\.google\.com\/view\/rlxf-icml2026/i,
+  /eon\.systems/i,
+  /dynamical-intelligence-group\.github\.io/i,
+  /jhu\.edu/i,
+  /kempnerinstitute\.harvard\.edu/i
+];
 
 const PROFILE_CONTEXT = `
 Aarav Sinha is a student researcher interested in computational neuroscience, connectomics, embodied neural models, deep reinforcement learning, and how biological neural circuits give rise to behavior.
@@ -52,6 +67,7 @@ Style:
 - Speak about Aarav in the third person unless the user explicitly asks you to draft text in Aarav's voice.
 - Do not claim to be Aarav.
 - When asked about a paper, cover the problem, method or benchmark, main contribution, why it matters, and how it connects to Aarav's broader research interests.
+- You have access to a server-side web search tool when the site enables it. Do not say you cannot search the web when a web-search request is made; use the tool instead.
 - Use web search when the user asks for recent information, external verification, public links, workshop/preprint pages, or details not present in the profile context.
 - Do not use web search for questions that are fully answerable from the profile context.
 - Prefer authoritative sources when searching: Aarav's website, paper PDFs, OpenReview, DOI/preprint pages, conference/workshop pages, institution pages, and primary sources.
@@ -134,14 +150,51 @@ function extractOutputText(responseBody) {
 }
 
 function extractCitations(responseBody) {
-  const citationsByUrl = new Map();
+  const annotatedCitations = new Map();
+  const fallbackCitations = new Map();
+
+  function normalizeCitationUrl(url) {
+    try {
+      const parsedUrl = new URL(url);
+
+      parsedUrl.searchParams.delete('utm_source');
+      parsedUrl.searchParams.delete('utm_medium');
+      parsedUrl.searchParams.delete('utm_campaign');
+      return parsedUrl.toString();
+    } catch (error) {
+      return url;
+    }
+  }
+
+  function addCitation(targetMap, title, url) {
+    const normalizedUrl = url ? normalizeCitationUrl(url) : '';
+
+    if (!normalizedUrl || targetMap.has(normalizedUrl)) {
+      return;
+    }
+
+    targetMap.set(normalizedUrl, {
+      title: title && title !== url ? title : normalizedUrl,
+      url: normalizedUrl
+    });
+  }
 
   if (!Array.isArray(responseBody.output)) {
     return [];
   }
 
   responseBody.output.forEach(function (item) {
-    if (!item || !Array.isArray(item.content)) {
+    if (!item) {
+      return;
+    }
+
+    if (item.type === 'web_search_call' && item.action && Array.isArray(item.action.sources)) {
+      item.action.sources.forEach(function (source) {
+        addCitation(fallbackCitations, source.title || source.url, source.url);
+      });
+    }
+
+    if (!Array.isArray(item.content)) {
       return;
     }
 
@@ -152,21 +205,24 @@ function extractCitations(responseBody) {
 
       part.annotations.forEach(function (annotation) {
         const citation = annotation && (annotation.url_citation || annotation);
-        const url = citation && citation.url;
-
-        if (!url || citationsByUrl.has(url)) {
-          return;
-        }
-
-        citationsByUrl.set(url, {
-          title: citation.title || url,
-          url: url
-        });
+        addCitation(annotatedCitations, citation && citation.title, citation && citation.url);
       });
     });
   });
 
-  return Array.from(citationsByUrl.values()).slice(0, 5);
+  if (annotatedCitations.size > 0) {
+    return Array.from(annotatedCitations.values()).slice(0, 5);
+  }
+
+  return Array.from(fallbackCitations.values())
+    .filter(function (citation) {
+      return isAllowedCitation(citation);
+    })
+    .slice(0, 5);
+}
+
+function formatReplyForUi(text) {
+  return text.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '$1');
 }
 
 function isBlockedCitation(citation) {
@@ -179,6 +235,12 @@ function isBlockedCitation(citation) {
   }
 
   return BLOCKED_CITATION_DOMAINS.indexOf(hostname) !== -1;
+}
+
+function isAllowedCitation(citation) {
+  return ALLOWED_CITATION_PATTERNS.some(function (pattern) {
+    return pattern.test(citation.url);
+  });
 }
 
 function removeBlockedCitationText(text, blockedCitations) {
@@ -222,7 +284,42 @@ function getProfileFallbackForQuestion(question) {
   return '';
 }
 
+function shouldRequireWebSearch(messages) {
+  const lastMessage = messages[messages.length - 1];
+  const text = lastMessage && lastMessage.content
+    ? lastMessage.content.toLowerCase()
+    : '';
+  const searchTriggers = [
+    'search the web',
+    'web search',
+    'look up',
+    'google',
+    'find online',
+    'online',
+    'latest',
+    'recent',
+    'current',
+    'today',
+    'now',
+    'verify',
+    'source',
+    'sources',
+    'cite',
+    'citation',
+    'link',
+    'public page',
+    'workshop page',
+    'preprint page',
+    'doi'
+  ];
+
+  return searchTriggers.some(function (trigger) {
+    return text.indexOf(trigger) !== -1;
+  });
+}
+
 function buildOpenAIRequestBody(messages) {
+  const requireWebSearch = shouldRequireWebSearch(messages);
   const body = {
     model: process.env.OPENAI_MODEL || DEFAULT_MODEL,
     instructions: SYSTEM_PROMPT,
@@ -239,7 +336,7 @@ function buildOpenAIRequestBody(messages) {
         search_context_size: process.env.OPENAI_SEARCH_CONTEXT_SIZE || 'medium'
       }
     ];
-    body.tool_choice = 'auto';
+    body.tool_choice = requireWebSearch ? 'required' : 'auto';
     body.include = ['web_search_call.action.sources'];
   }
 
@@ -333,9 +430,11 @@ module.exports = async function handler(req, res) {
     }
 
     const extractedCitations = extractCitations(responseBody);
-    const blockedCitations = extractedCitations.filter(isBlockedCitation);
+    const blockedCitations = extractedCitations.filter(function (citation) {
+      return isBlockedCitation(citation) || !isAllowedCitation(citation);
+    });
     const citations = extractedCitations.filter(function (citation) {
-      return !isBlockedCitation(citation);
+      return !isBlockedCitation(citation) && isAllowedCitation(citation);
     });
     let reply = extractOutputText(responseBody);
 
@@ -347,6 +446,8 @@ module.exports = async function handler(req, res) {
         reply += '\n\nI searched the web, but the only result returned was a secondary or aggregator source, so I am not treating it as an authoritative citation.';
       }
     }
+
+    reply = formatReplyForUi(reply);
 
     sendJson(res, 200, {
       reply: reply || 'I could not generate an answer from the site context.',

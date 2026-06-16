@@ -200,7 +200,7 @@
     }
 
     function appendMessage(role, text, isLoading, citations) {
-      var message = document.createElement('p');
+      var message = document.createElement('div');
 
       message.className = 'chatbot-message chatbot-message-' + role;
       setMessageContent(message, text, citations);
