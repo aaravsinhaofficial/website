@@ -1,6 +1,7 @@
 (function () {
   var profileLink = document.querySelector('.profile-photo-link');
   var mailingForms = document.querySelectorAll('.mailing-list-form');
+  var chatbotEndpoint = '/api/chat';
 
   if (profileLink) {
     profileLink.addEventListener('click', function (event) {
@@ -114,5 +115,186 @@
 
   for (var i = 0; i < mailingForms.length; i++) {
     setupMailingForm(mailingForms[i]);
+  }
+
+  function createChatbotElement() {
+    var chatbot = document.createElement('section');
+
+    chatbot.className = 'chatbot-widget';
+    chatbot.setAttribute('aria-label', 'Ask about Aarav');
+    chatbot.innerHTML = '' +
+      '<div class="chatbot-panel" id="chatbot-panel" hidden>' +
+        '<div class="chatbot-header">' +
+          '<div>' +
+            '<h2>Ask about Aarav</h2>' +
+          '</div>' +
+          '<button class="chatbot-close" type="button" aria-label="Close chat">x</button>' +
+        '</div>' +
+        '<div class="chatbot-messages" role="log" aria-live="polite" aria-relevant="additions"></div>' +
+        '<div class="chatbot-prompts" aria-label="Suggested questions">' +
+          '<button type="button" data-chatbot-prompt="What research is Aarav working on?">Research</button>' +
+          '<button type="button" data-chatbot-prompt="How can I contact Aarav?">Contact</button>' +
+          '<button type="button" data-chatbot-prompt="What has Aarav written about recently?">Blog</button>' +
+        '</div>' +
+        '<form class="chatbot-form">' +
+          '<label class="visually-hidden" for="chatbot-input">Message</label>' +
+          '<input id="chatbot-input" name="message" autocomplete="off" maxlength="1200" placeholder="Ask a question" required>' +
+          '<button type="submit">Send</button>' +
+        '</form>' +
+      '</div>' +
+      '<button class="chatbot-toggle" type="button" aria-controls="chatbot-panel" aria-expanded="false">Ask AI</button>';
+
+    return chatbot;
+  }
+
+  function setupChatbot() {
+    var chatbot = createChatbotElement();
+    var panel = chatbot.querySelector('.chatbot-panel');
+    var toggle = chatbot.querySelector('.chatbot-toggle');
+    var closeButton = chatbot.querySelector('.chatbot-close');
+    var form = chatbot.querySelector('.chatbot-form');
+    var input = chatbot.querySelector('#chatbot-input');
+    var sendButton = form.querySelector('button');
+    var messagesList = chatbot.querySelector('.chatbot-messages');
+    var promptButtons = chatbot.querySelectorAll('[data-chatbot-prompt]');
+    var messages = [];
+    var isBusy = false;
+
+    function setOpen(isOpen) {
+      panel.hidden = !isOpen;
+      toggle.setAttribute('aria-expanded', String(isOpen));
+
+      if (isOpen) {
+        input.focus();
+      }
+    }
+
+    function appendMessage(role, text, isLoading) {
+      var message = document.createElement('p');
+
+      message.className = 'chatbot-message chatbot-message-' + role;
+      message.textContent = text;
+
+      if (isLoading) {
+        message.classList.add('is-loading');
+      }
+
+      messagesList.appendChild(message);
+      messagesList.scrollTop = messagesList.scrollHeight;
+
+      return message;
+    }
+
+    function setBusy(busy) {
+      input.disabled = busy;
+      sendButton.disabled = busy;
+
+      for (var i = 0; i < promptButtons.length; i++) {
+        promptButtons[i].disabled = busy;
+      }
+    }
+
+    function getErrorMessage(error, status) {
+      if (status === 404) {
+        return 'The chat endpoint is not running yet. Deploy with the serverless API and set OPENAI_API_KEY.';
+      }
+
+      return error || 'The chat is unavailable right now. Try again in a moment.';
+    }
+
+    function sendMessage(text) {
+      var loadingMessage;
+
+      if (!text || isBusy) {
+        return;
+      }
+
+      isBusy = true;
+      appendMessage('user', text, false);
+      messages.push({ role: 'user', content: text });
+      loadingMessage = appendMessage('assistant', 'Thinking...', true);
+      setBusy(true);
+
+      fetch(chatbotEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          messages: messages.slice(-10)
+        })
+      })
+        .then(function (response) {
+          return response.json()
+            .catch(function () {
+              return {};
+            })
+            .then(function (body) {
+              if (!response.ok) {
+                throw {
+                  message: getErrorMessage(body.error, response.status)
+                };
+              }
+
+              return body;
+            });
+        })
+        .then(function (body) {
+          var reply = body.reply || 'I could not find an answer from the site context.';
+
+          loadingMessage.classList.remove('is-loading');
+          loadingMessage.textContent = reply;
+          messages.push({ role: 'assistant', content: reply });
+        })
+        .catch(function (error) {
+          loadingMessage.classList.remove('is-loading');
+          loadingMessage.classList.add('is-error');
+          loadingMessage.textContent = error.message || getErrorMessage('', 0);
+          messages.pop();
+        })
+        .finally(function () {
+          isBusy = false;
+          setBusy(false);
+          input.focus();
+          messagesList.scrollTop = messagesList.scrollHeight;
+        });
+    }
+
+    document.body.appendChild(chatbot);
+    appendMessage('assistant', "Hi, I am Aarav's site assistant.", false);
+
+    toggle.addEventListener('click', function () {
+      setOpen(panel.hidden);
+    });
+
+    closeButton.addEventListener('click', function () {
+      setOpen(false);
+      toggle.focus();
+    });
+
+    form.addEventListener('submit', function (event) {
+      var text = input.value.trim();
+
+      event.preventDefault();
+      input.value = '';
+      sendMessage(text);
+    });
+
+    for (var i = 0; i < promptButtons.length; i++) {
+      promptButtons[i].addEventListener('click', function () {
+        sendMessage(this.getAttribute('data-chatbot-prompt'));
+      });
+    }
+
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape' && !panel.hidden) {
+        setOpen(false);
+        toggle.focus();
+      }
+    });
+  }
+
+  if (document.body) {
+    setupChatbot();
   }
 }());
