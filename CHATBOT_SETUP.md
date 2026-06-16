@@ -6,7 +6,7 @@ The browser widget in `script.js` calls `/api/chat`. The API route in `api/chat.
 
 1. Deploy this repository on a host that supports serverless functions, such as Vercel.
 2. Add `OPENAI_API_KEY` as an environment variable in the host dashboard.
-3. Optionally add `OPENAI_MODEL` to override the default lightweight model.
+3. Optionally add `OPENAI_MODEL` to override the default model.
 4. Optionally tune web search and rate limiting with the variables below.
 5. Redeploy after adding or changing environment variables.
 
@@ -18,14 +18,19 @@ Keep local keys in `.env`, which is ignored by Git:
 
 ```sh
 OPENAI_API_KEY=<your-openai-api-key>
-OPENAI_MODEL=gpt-4.1-mini
+OPENAI_MODEL=gpt-5
 OPENAI_WEB_SEARCH=true
 OPENAI_SEARCH_CONTEXT_SIZE=medium
-OPENAI_MAX_OUTPUT_TOKENS=900
+OPENAI_MAX_OUTPUT_TOKENS=3000
+OPENAI_PDF_ACCESS=true
+OPENAI_MAX_PDF_ATTACHMENTS=4
+PUBLIC_SITE_URL=https://aaravsinha.dev
 CHAT_RATE_LIMIT_MAX_REQUESTS=60
 CHAT_RATE_LIMIT_WINDOW_MS=600000
 ```
 
 `OPENAI_WEB_SEARCH=false` disables web search. `OPENAI_SEARCH_CONTEXT_SIZE` can be `low`, `medium`, or `high`; higher settings can improve detailed answers but may increase cost and latency.
+
+`OPENAI_PDF_ACCESS=false` disables automatic paper PDF attachments. The API attaches PDFs only for paper/research/PDF questions, using the public URLs under `PUBLIC_SITE_URL`.
 
 Never paste the API key into `index.html`, `script.js`, or any other browser-delivered file.

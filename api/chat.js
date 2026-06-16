@@ -1,12 +1,16 @@
 const OPENAI_API_URL = 'https://api.openai.com/v1/responses';
-const DEFAULT_MODEL = 'gpt-4.1-mini';
-const DEFAULT_MAX_OUTPUT_TOKENS = 900;
+const DEFAULT_MODEL = 'gpt-5';
+const DEFAULT_MAX_OUTPUT_TOKENS = 3000;
+const GPT5_MIN_OUTPUT_TOKENS = 2500;
 const MAX_MESSAGE_CHARS = 1200;
 const MAX_HISTORY_MESSAGES = 10;
 const RATE_LIMIT_WINDOW_MS = Number(process.env.CHAT_RATE_LIMIT_WINDOW_MS || 10 * 60 * 1000);
 const RATE_LIMIT_MAX_REQUESTS = Number(process.env.CHAT_RATE_LIMIT_MAX_REQUESTS || 60);
 const rateLimitBuckets = new Map();
 const WEB_SEARCH_ENABLED = process.env.OPENAI_WEB_SEARCH !== 'false';
+const PDF_ACCESS_ENABLED = process.env.OPENAI_PDF_ACCESS !== 'false';
+const MAX_PDF_ATTACHMENTS = Number(process.env.OPENAI_MAX_PDF_ATTACHMENTS || 4);
+const PUBLIC_SITE_URL = (process.env.PUBLIC_SITE_URL || process.env.SITE_URL || 'https://aaravsinha.dev').replace(/\/$/, '');
 const BLOCKED_CITATION_DOMAINS = ['digg.com', 'reddit.com', 'quora.com'];
 const ALLOWED_CITATION_PATTERNS = [
   /aaravsinha\.dev/i,
@@ -22,6 +26,28 @@ const ALLOWED_CITATION_PATTERNS = [
   /dynamical-intelligence-group\.github\.io/i,
   /jhu\.edu/i,
   /kempnerinstitute\.harvard\.edu/i
+];
+const PAPER_FILES = [
+  {
+    title: 'MapShift: Controlled Post-Intervention Evaluation for Embodied World Models',
+    path: '/data/mapshift-controlled-post-intervention-evaluation.pdf',
+    aliases: ['mapshift', 'controlled post-intervention', 'embodied world models', 'rlxf']
+  },
+  {
+    title: 'Can AI Scientists Discover Neural Mechanisms? Evaluating Agentic Biological Discovery in a Digital Fly',
+    path: '/data/ai-scientists-neural-mechanisms-digital-fly.pdf',
+    aliases: ['ai scientists', 'digital fly', 'agentic biological discovery', 'genbio']
+  },
+  {
+    title: 'Credit Bandwidth Lower Bounds for Diffusive Cortical Learning',
+    path: '/data/credit-bandwidth-diffusive-cortical-learning.pdf',
+    aliases: ['credit bandwidth', 'diffusive cortical learning', 'cortical learning']
+  },
+  {
+    title: 'Towards Embodied Brain Emulations: A Drosophila Connectome-Constrained Brain Model Accurately Predicts Neural Activity and Controls Behavior in a Virtual Environment',
+    path: '/data/sfn_poster_2025.pdf',
+    aliases: ['sfn', 'drosophila', 'embodied brain', 'connectome-constrained', 'virtual environment']
+  }
 ];
 
 const PROFILE_CONTEXT = `
@@ -67,6 +93,7 @@ Style:
 - Speak about Aarav in the third person unless the user explicitly asks you to draft text in Aarav's voice.
 - Do not claim to be Aarav.
 - When asked about a paper, cover the problem, method or benchmark, main contribution, why it matters, and how it connects to Aarav's broader research interests.
+- When paper PDFs are attached, use them as primary evidence for details about methods, experiments, definitions, figures, limitations, and claims. Do not pretend a PDF is attached if it is not.
 - You have access to a server-side web search tool when the site enables it. Do not say you cannot search the web when a web-search request is made; use the tool instead.
 - Use web search when the user asks for recent information, external verification, public links, workshop/preprint pages, or details not present in the profile context.
 - Do not use web search for questions that are fully answerable from the profile context.
@@ -318,16 +345,137 @@ function shouldRequireWebSearch(messages) {
   });
 }
 
+function getPaperFileUrl(paperFile) {
+  return PUBLIC_SITE_URL + paperFile.path;
+}
+
+function shouldAttachPaperFiles(messages) {
+  const lastMessage = messages[messages.length - 1];
+  const text = lastMessage && lastMessage.content
+    ? lastMessage.content.toLowerCase()
+    : '';
+  const paperTriggers = [
+    'paper',
+    'papers',
+    'publication',
+    'publications',
+    'pdf',
+    'poster',
+    'method',
+    'methods',
+    'experiment',
+    'experiments',
+    'benchmark',
+    'results',
+    'figure',
+    'figures',
+    'mapshift',
+    'ai scientists',
+    'digital fly',
+    'credit bandwidth',
+    'odor plume',
+    'drosophila',
+    'sfn',
+    'rlxf',
+    'genbio'
+  ];
+
+  return paperTriggers.some(function (trigger) {
+    return text.indexOf(trigger) !== -1;
+  });
+}
+
+function getRelevantPaperFiles(messages) {
+  const lastMessage = messages[messages.length - 1];
+  const text = lastMessage && lastMessage.content
+    ? lastMessage.content.toLowerCase()
+    : '';
+  const broadRequest = [
+    'all',
+    'each',
+    'papers',
+    'publications',
+    'uploaded',
+    'pdfs',
+    'research'
+  ].some(function (trigger) {
+    return text.indexOf(trigger) !== -1;
+  });
+  const matchedPapers = PAPER_FILES.filter(function (paperFile) {
+    return paperFile.aliases.some(function (alias) {
+      return text.indexOf(alias) !== -1;
+    });
+  });
+
+  if (matchedPapers.length > 0 && !broadRequest) {
+    return matchedPapers.slice(0, MAX_PDF_ATTACHMENTS);
+  }
+
+  if (shouldAttachPaperFiles(messages)) {
+    return PAPER_FILES.slice(0, MAX_PDF_ATTACHMENTS);
+  }
+
+  return [];
+}
+
+function buildResponsesInput(messages, attachedPaperFiles) {
+  if (!attachedPaperFiles.length) {
+    return messages;
+  }
+
+  return messages.map(function (message, index) {
+    const isLastMessage = index === messages.length - 1;
+
+    if (!isLastMessage || message.role !== 'user') {
+      return message;
+    }
+
+    return {
+      role: 'user',
+      content: [
+        {
+          type: 'input_text',
+          text: message.content + '\n\nAttached paper PDFs for this question: ' +
+            attachedPaperFiles.map(function (paperFile) {
+              return paperFile.title;
+            }).join('; ') +
+            '. Use the attached PDFs for paper-specific details before relying on summary context.'
+        }
+      ].concat(attachedPaperFiles.map(function (paperFile) {
+        return {
+          type: 'input_file',
+          file_url: getPaperFileUrl(paperFile)
+        };
+      }))
+    };
+  });
+}
+
+function getMaxOutputTokens(model) {
+  const configuredTokens = Number(process.env.OPENAI_MAX_OUTPUT_TOKENS || DEFAULT_MAX_OUTPUT_TOKENS);
+
+  if (model.toLowerCase().startsWith('gpt-5')) {
+    return Math.max(configuredTokens, GPT5_MIN_OUTPUT_TOKENS);
+  }
+
+  return configuredTokens;
+}
+
 function buildOpenAIRequestBody(messages) {
   const requireWebSearch = shouldRequireWebSearch(messages);
+  const attachedPaperFiles = PDF_ACCESS_ENABLED ? getRelevantPaperFiles(messages) : [];
+  const model = process.env.OPENAI_MODEL || DEFAULT_MODEL;
   const body = {
-    model: process.env.OPENAI_MODEL || DEFAULT_MODEL,
+    model: model,
     instructions: SYSTEM_PROMPT,
-    input: messages,
-    max_output_tokens: Number(process.env.OPENAI_MAX_OUTPUT_TOKENS || DEFAULT_MAX_OUTPUT_TOKENS),
-    store: false,
-    temperature: 0.3
+    input: buildResponsesInput(messages, attachedPaperFiles),
+    max_output_tokens: getMaxOutputTokens(model),
+    store: false
   };
+
+  if (!model.toLowerCase().startsWith('gpt-5')) {
+    body.temperature = Number(process.env.OPENAI_TEMPERATURE || 0.3);
+  }
 
   if (WEB_SEARCH_ENABLED) {
     body.tools = [
