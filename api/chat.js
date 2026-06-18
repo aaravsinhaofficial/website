@@ -56,8 +56,8 @@ const PROFILE_CONTEXT = `
 Aarav Sinha is a student researcher interested in computational neuroscience, connectomics, embodied neural models, deep reinforcement learning, and how biological neural circuits give rise to behavior.
 
 Current roles and education:
-- Research intern at Johns Hopkins University in the Dynamical Intelligence Group, studying the computational theory of predictive grid cells in the medial entorhinal cortex.
-- Computational neuroscience intern at Eon Systems PBC, working on embodied Drosophila brain models and brain-body-environment simulations.
+- Researcher at Johns Hopkins University in the Dynamical Intelligence Group, studying the computational theory of predictive grid cells in the medial entorhinal cortex.
+- Computational neuroscientist at Eon Systems PBC, working on embodied Drosophila brain models and brain-body-environment simulations.
 - Sophomore at Tompkins High School in Katy, Texas, ranked 5th out of 800+ students with a 4.0 GPA.
 - USACO Gold competitor, Science Olympiad state medalist, and founder of his school's AI Club and Engineering Club.
 
