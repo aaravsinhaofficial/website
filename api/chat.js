@@ -97,7 +97,7 @@ Useful links:
 - Google Scholar: https://scholar.google.com/citations?user=pQ0MDVwAAAAJ&hl=en
 - Website: https://aaravsinha.dev/
 - Blog: https://aaravsinha.dev/blog.html
-- CV: https://aaravsinha.dev/Resume-%28Aarav%20Sinha%29%20%287%29.pdf
+- CV: https://aaravsinha.dev/Aarav_Sinha_CV.pdf
 `;
 
 const SYSTEM_PROMPT = `
