@@ -1,0 +1,54 @@
+---
+title: "Blog"
+html-title: "Blog - Aarav Sinha"
+site-root: ""
+canonical-url: "https://aaravsinha.dev/blog.html"
+form-url: "https://aaravsinha.dev/blog.html"
+body-class: "blog-index"
+show-title: true
+featured-post-url: "blog/icml-update.html"
+featured-post-kicker: "Latest Post"
+featured-post-title: "An ICML Update"
+featured-post-summary: "A quick update on a recent ICML submission: the reviews were great, and I am excited about the path to final acceptance."
+featured-post-cta: "Read the post ->"
+---
+
+Thoughts on neuroscience, computation, and everything in between.
+
+::: {.blog-post-list}
+::: {.blog-post-row}
+::: {.blog-post-date}
+**Mar 24, 2026**
+:::
+
+::: {.blog-post-summary}
+[An ICML Update](blog/icml-update.html)
+
+A vague but very positive update on an ICML submission and the encouraging reviews it received.
+:::
+:::
+
+::: {.blog-post-row}
+::: {.blog-post-date}
+**Mar 11, 2026**
+:::
+
+::: {.blog-post-summary}
+[Going Viral: 100M+ Views on Embodied Brain Emulation](blog/going-viral.html)
+
+Our work at Eon Systems on the first-ever embodied Drosophila brain emulation went viral across X, LinkedIn, YouTube, and more.
+:::
+:::
+
+::: {.blog-post-row}
+::: {.blog-post-date}
+**Mar 11, 2026**
+:::
+
+::: {.blog-post-summary}
+[Welcome to My Blog](blog/welcome.html)
+
+A quick introduction.
+:::
+:::
+:::

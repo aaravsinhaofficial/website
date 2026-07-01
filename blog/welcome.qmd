@@ -1,0 +1,15 @@
+---
+title: "Welcome to My Blog!"
+html-title: "Welcome to My Blog!"
+site-root: "../"
+canonical-url: "https://aaravsinha.dev/blog/welcome.html"
+form-url: "https://aaravsinha.dev/blog/welcome.html"
+display-date: "March 11, 2026"
+show-title: true
+---
+
+Welcome! I'm starting this blog as a space to share my thoughts on neuroscience, computation, and the intersection of the two.
+
+I'll be writing about topics like computational models of the brain, reinforcement learning, connectomics, and whatever else I find interesting along the way.
+
+Stay tuned for more. In the meantime, feel free to check out my [research and work](../index.html), or reach out via [email](mailto:aaravsinha002@gmail.com).

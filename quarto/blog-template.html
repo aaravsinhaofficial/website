@@ -1,40 +1,53 @@
 <!DOCTYPE HTML>
-<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<html lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
-    <title>Welcome to My Blog!</title>
+    <title>$if(html-title)$$html-title$$else$$title$ - Aarav Sinha$endif$</title>
 
     <meta name="author" content="Aarav Sinha">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" type="text/css" href="../stylesheet.css">
-    <link rel="icon" type="image/png" sizes="32x32" href="../images/favicon-32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="../images/favicon-16.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="../images/favicon-180.png">
-  <link rel="canonical" href="https://aaravsinha.dev/blog/welcome.html">
-</head>
+    <link rel="stylesheet" type="text/css" href="$site-root$stylesheet.css">
+    <link rel="icon" type="image/png" sizes="32x32" href="$site-root$images/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="$site-root$images/favicon-16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="$site-root$images/favicon-180.png">
+  </head>
 
-  <body class="blog-page">
+  <body class="blog-page$if(body-class)$ $body-class$$endif$">
     <table class="blog-shell" style="width:100%;max-width:800px;border:0px;border-spacing:0px;border-collapse:separate;margin-right:auto;margin-left:auto;"><tbody>
       <tr style="padding:0px">
         <td style="padding:0px">
 
           <header class="blog-header">
             <p class="blog-site-title">
-              <a href="../index.html">Aarav Sinha</a>
+              <a href="$site-root$index.html">Aarav Sinha</a>
             </p>
             <p class="blog-nav">
-              <a href="../index.html">Home</a> &nbsp;/&nbsp;
-              <a href="../blog.html">Blog</a>
+              <a href="$site-root$index.html">Home</a> &nbsp;/&nbsp;
+              <a href="$site-root$blog.html">Blog</a>
             </p>
           </header>
 
-          
+          $if(featured-post-url)$
+          <section class="blog-featured">
+            <a class="featured-post-banner" href="$featured-post-url$">
+              <span class="featured-post-kicker">$featured-post-kicker$</span>
+              <span class="featured-post-title">$featured-post-title$</span>
+              <span class="featured-post-summary">$featured-post-summary$</span>
+              <span class="featured-post-cta">$featured-post-cta$</span>
+            </a>
+          </section>
+          $endif$
+
           <main class="quarto-blog-content">
-                        <h2>Welcome to My Blog!</h2>
-                                    <p class="post-date">March 11, 2026</p>
-            
-<p>Welcome! I’m starting this blog as a space to share my thoughts on neuroscience, computation, and the intersection of the two.</p>
-<p>I’ll be writing about topics like computational models of the brain, reinforcement learning, connectomics, and whatever else I find interesting along the way.</p>
-<p>Stay tuned for more. In the meantime, feel free to check out my <a href="../index.html">research and work</a>, or reach out via <a href="mailto:aaravsinha002@gmail.com">email</a>.</p>
+            $if(show-title)$
+            <h2>$title$</h2>
+            $endif$
+            $if(display-date)$
+            <p class="post-date">$display-date$</p>
+            $endif$
+
+$body$
           </main>
 
           <section class="signup-section blog-signup" aria-labelledby="mailing-list-title">
@@ -47,11 +60,11 @@
               <input type="hidden" name="_next" value="https://aaravsinha.dev/subscribe-success.html">
               <input type="hidden" name="_subject" value="New mailing list signup">
               <input type="hidden" name="_autoresponse" value="Thanks for subscribing to Aarav Sinha updates. You'll hear from me when I publish new posts or share major project updates.">
-              <input type="hidden" name="_url" value="https://aaravsinha.dev/blog/welcome.html">
+              <input type="hidden" name="_url" value="$form-url$">
               <input type="text" name="_honey" style="display:none">
               <label class="signup-label" for="mailing-list-email">Email address</label>
               <div class="signup-form-row">
-                <input class="signup-input" autocomplete="email" id="mailing-list-email" name="email" placeholder="you@example.com" required="" type="email">
+                <input class="signup-input" autocomplete="email" id="mailing-list-email" name="email" placeholder="you@example.com" required type="email">
                 <button class="signup-button" type="submit">Join</button>
               </div>
               <p class="signup-feedback" aria-live="polite"></p>
@@ -67,7 +80,6 @@
         </td>
       </tr>
     </tbody></table>
-    <script src="../script.js"></script>
-  
-
-</body></html>
+    <script src="$site-root$script.js"></script>
+  </body>
+</html>

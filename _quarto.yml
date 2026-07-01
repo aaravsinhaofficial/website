@@ -1,0 +1,10 @@
+format:
+  html:
+    template: quarto/blog-template.html
+    standalone: true
+    toc: false
+    number-sections: false
+    anchor-sections: false
+    tabsets: false
+    minimal: true
+    html-math-method: plain

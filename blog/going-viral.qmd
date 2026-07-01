@@ -1,0 +1,48 @@
+---
+title: "Going Viral: 100M+ Views on Embodied Brain Emulation"
+html-title: "Going Viral: 100M+ Views on Embodied Brain Emulation - Aarav Sinha"
+site-root: "../"
+canonical-url: "https://aaravsinha.dev/blog/going-viral.html"
+form-url: "https://aaravsinha.dev/blog/going-viral.html"
+display-date: "March 2026"
+show-title: true
+---
+
+Our work at [Eon Systems](https://eon.systems/) on embodied Drosophila brain emulation went viral, accumulating over 100 million views across social media platforms. It started with a post on X by our founder, [Dr. Alex Wissner-Gross](https://www.linkedin.com/in/alex-wissner-gross/), and quickly spread across X, LinkedIn, YouTube, Reddit, and beyond.
+
+### The Video
+
+```{=html}
+<video width="100%" controls autoplay muted loop style="border-radius:8px;">
+  <source src="../images/eon_viral.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+```
+
+### The Original Post
+
+[Original X post by Dr. Alex Wissner-Gross](https://x.com/alexwg/status/2030217301929132323)
+
+### What Went Viral
+
+The video showcases a connectome-constrained Drosophila brain model controlling a virtual fly body in real time - the first-ever multi-behavior embodied brain emulation. The model, built from the fruit fly connectome, accurately predicts neural activity and produces biologically realistic behavior in a dynamic virtual environment. You can read the full writeup on the [Eon Systems blog](https://eon.systems/updates/embodied-brain-emulation).
+
+I contributed to the brain embodiment component of the project as a computational neuroscience intern at Eon Systems, and was a co-author on the [poster presented at SfN 2025](../data/sfn_poster_2025.pdf).
+
+### My Reflections
+
+When I first joined Eon, the idea of taking a connectome - a static wiring diagram of a brain - and making it actually *do* something felt almost absurdly ambitious. Connectomes tell you what's connected to what, but they don't tell you how a brain moves a body, responds to stimuli, or decides what to do next. Bridging that gap was the hard part, and it's the part I got to work on.
+
+My role focused on the embodiment side: taking the neural network constrained by the Drosophila connectome and coupling it to a virtual fly body in a physics-based environment. The challenge wasn't just making the fly move - it was making it move *right*. We needed biologically plausible behavior: grooming, walking, responses to stimuli, all emerging from the connectome-constrained network rather than being hand-coded.
+
+Watching the final result - a virtual fly driven by a brain model, exhibiting naturalistic behaviors - was one of those moments where you realize the field has crossed a threshold. We're not just modeling neurons in isolation anymore. We're building systems where brain, body, and environment interact as a closed loop, just like in biology.
+
+It was pretty surreal seeing Elon Musk comment "Wow" on the original X post - that alone tells you something about how far this work reached. The fact that this resonated with over 100 million people tells me something. People intuitively understand how profound it is to simulate a brain that actually *controls* something. It's not just a scientific milestone - it's a window into what's coming. If we can do this for a fly today, the question of what's possible for more complex organisms tomorrow suddenly feels a lot less hypothetical.
+
+### Links
+
+- [My LinkedIn Post](https://www.linkedin.com/feed/update/urn:li:activity:7436858102316060672/)
+- [Eon Systems - Embodied Brain Emulation Writeup](https://eon.systems/updates/embodied-brain-emulation)
+- [Eon Systems - Official Page](https://eon.systems/)
+- [SfN 2025 Poster (PDF)](../data/sfn_poster_2025.pdf)
+- [Shiu et al. - Whole-brain connectome of *Drosophila* (Nature)](https://www.nature.com/articles/s41586-024-07763-9)

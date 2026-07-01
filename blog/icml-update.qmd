@@ -1,0 +1,15 @@
+---
+title: "An ICML Update"
+html-title: "An ICML Update - Aarav Sinha"
+site-root: "../"
+canonical-url: "https://aaravsinha.dev/blog/icml-update.html"
+form-url: "https://aaravsinha.dev/blog/icml-update.html"
+display-date: "March 24, 2026"
+show-title: true
+---
+
+A quick research update: a paper I submitted to ICML just got its reviews back.
+
+I'll keep the details vague for now, but I am very happy with how the review process has gone so far. The feedback was great, and it is exciting to see such a positive response to the work.
+
+There is still a bit of waiting left before everything is final, but I am feeling optimistic and excited about the path to final acceptance. More soon once I can share more concretely.
