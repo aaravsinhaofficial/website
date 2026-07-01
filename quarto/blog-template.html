@@ -1,56 +1,65 @@
-<!DOCTYPE HTML>
+<!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <title>$if(html-title)$$html-title$$else$$title$ - Aarav Sinha$endif$</title>
 
     <meta name="author" content="Aarav Sinha">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" type="text/css" href="$site-root$stylesheet.css">
+    $if(canonical-url)$<link rel="canonical" href="$canonical-url$">$endif$
+
     <link rel="icon" type="image/png" sizes="32x32" href="$site-root$images/favicon-32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="$site-root$images/favicon-16.png">
     <link rel="apple-touch-icon" sizes="180x180" href="$site-root$images/favicon-180.png">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&amp;display=swap">
+    <link rel="stylesheet" type="text/css" href="$site-root$stylesheet.css">
+
+    <script data-goatcounter="https://aaravsinha.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
   </head>
 
   <body class="blog-page$if(body-class)$ $body-class$$endif$">
-    <table class="blog-shell" style="width:100%;max-width:800px;border:0px;border-spacing:0px;border-collapse:separate;margin-right:auto;margin-left:auto;"><tbody>
-      <tr style="padding:0px">
-        <td style="padding:0px">
+    <div class="page">
+      <div class="layout">
 
-          <header class="blog-header">
-            <p class="blog-site-title">
-              <a href="$site-root$index.html">Aarav Sinha</a>
-            </p>
-            <p class="blog-nav">
-              <a href="$site-root$index.html">Home</a> &nbsp;/&nbsp;
-              <a href="$site-root$blog.html">Blog</a>
-            </p>
-          </header>
+        <aside class="sidebar">
+          <a class="site-title" href="$site-root$index.html">Aarav Sinha</a>
+          <p class="tagline">Computational neuroscience</p>
+          <nav class="sidebar-links" aria-label="Site">
+            <a href="$site-root$index.html">Home</a>
+            <a href="$site-root$blog.html">Blog</a>
+          </nav>
+          <nav class="sidebar-links is-contact" aria-label="Profile links">
+            <a href="mailto:aaravsinha002@gmail.com">Email</a>
+            <a href="https://github.com/aaravsinhaofficial">GitHub</a>
+            <a href="https://www.linkedin.com/in/aaravsinha1/">LinkedIn</a>
+            <a href="https://scholar.google.com/citations?user=pQ0MDVwAAAAJ&amp;hl=en">Scholar</a>
+            <a href="$site-root$Aarav_Sinha_CV.pdf">CV</a>
+          </nav>
+        </aside>
+
+        <main class="content">
 
           $if(featured-post-url)$
-          <section class="blog-featured">
-            <a class="featured-post-banner" href="$featured-post-url$">
-              <span class="featured-post-kicker">$featured-post-kicker$</span>
-              <span class="featured-post-title">$featured-post-title$</span>
-              <span class="featured-post-summary">$featured-post-summary$</span>
-              <span class="featured-post-cta">$featured-post-cta$</span>
-            </a>
-          </section>
+          <a class="featured" href="$featured-post-url$">
+            <span class="featured-post-kicker">$featured-post-kicker$</span>
+            <span class="featured-post-title">$featured-post-title$</span>
+            <span class="featured-post-summary">$featured-post-summary$</span>
+            <span class="featured-post-cta">$featured-post-cta$</span>
+          </a>
           $endif$
 
-          <main class="quarto-blog-content">
-            $if(show-title)$
-            <h2>$title$</h2>
-            $endif$
-            $if(display-date)$
-            <p class="post-date">$display-date$</p>
-            $endif$
+          <article class="post">
+            $if(show-title)$<h1 class="post-title">$title$</h1>$endif$
+            $if(display-date)$<p class="post-date">$display-date$</p>$endif$
 
 $body$
-          </main>
+          </article>
 
-          <section class="signup-section blog-signup" aria-labelledby="mailing-list-title">
+          <section class="blog-signup" aria-labelledby="mailing-list-title">
             <p class="signup-kicker">Mailing List</p>
             <h2 class="signup-title" id="mailing-list-title">Stay updated</h2>
             <p class="signup-copy">
@@ -72,14 +81,12 @@ $body$
           </section>
 
           <footer class="blog-footer">
-            <p>
-              Template from <a href="https://github.com/jonbarron/jonbarron.github.io">Jon Barron</a>.
-            </p>
+            <p>Aarav Sinha &middot; Katy, Texas</p>
           </footer>
 
-        </td>
-      </tr>
-    </tbody></table>
+        </main>
+      </div>
+    </div>
     <script src="$site-root$script.js"></script>
   </body>
 </html>

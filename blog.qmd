@@ -10,7 +10,7 @@ featured-post-url: "blog/icml-update.html"
 featured-post-kicker: "Latest Post"
 featured-post-title: "An ICML Update"
 featured-post-summary: "A quick update on a recent ICML submission: the reviews were great, and I am excited about the path to final acceptance."
-featured-post-cta: "Read the post ->"
+featured-post-cta: "Read the post →"
 ---
 
 Thoughts on neuroscience, computation, and everything in between.

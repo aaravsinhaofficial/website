@@ -1,44 +1,58 @@
-<!DOCTYPE HTML>
-<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <title>Blog - Aarav Sinha</title>
 
     <meta name="author" content="Aarav Sinha">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" type="text/css" href="stylesheet.css">
+    <link rel="canonical" href="https://aaravsinha.dev/blog.html">
+
     <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="images/favicon-16.png">
     <link rel="apple-touch-icon" sizes="180x180" href="images/favicon-180.png">
-  <link rel="canonical" href="https://aaravsinha.dev/blog.html">
-</head>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&amp;display=swap">
+    <link rel="stylesheet" type="text/css" href="stylesheet.css">
+
+    <script data-goatcounter="https://aaravsinha.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+  </head>
 
   <body class="blog-page blog-index">
-    <table class="blog-shell" style="width:100%;max-width:800px;border:0px;border-spacing:0px;border-collapse:separate;margin-right:auto;margin-left:auto;"><tbody>
-      <tr style="padding:0px">
-        <td style="padding:0px">
+    <div class="page">
+      <div class="layout">
 
-          <header class="blog-header">
-            <p class="blog-site-title">
-              <a href="index.html">Aarav Sinha</a>
-            </p>
-            <p class="blog-nav">
-              <a href="index.html">Home</a> &nbsp;/&nbsp;
-              <a href="blog.html">Blog</a>
-            </p>
-          </header>
+        <aside class="sidebar">
+          <a class="site-title" href="index.html">Aarav Sinha</a>
+          <p class="tagline">Computational neuroscience</p>
+          <nav class="sidebar-links" aria-label="Site">
+            <a href="index.html">Home</a>
+            <a href="blog.html">Blog</a>
+          </nav>
+          <nav class="sidebar-links is-contact" aria-label="Profile links">
+            <a href="mailto:aaravsinha002@gmail.com">Email</a>
+            <a href="https://github.com/aaravsinhaofficial">GitHub</a>
+            <a href="https://www.linkedin.com/in/aaravsinha1/">LinkedIn</a>
+            <a href="https://scholar.google.com/citations?user=pQ0MDVwAAAAJ&amp;hl=en">Scholar</a>
+            <a href="Aarav_Sinha_CV.pdf">CV</a>
+          </nav>
+        </aside>
 
-                    <section class="blog-featured">
-            <a class="featured-post-banner" href="blog/icml-update.html">
-              <span class="featured-post-kicker">Latest Post</span>
-              <span class="featured-post-title">An ICML Update</span>
-              <span class="featured-post-summary">A quick update on a recent ICML submission: the reviews were great, and I am excited about the path to final acceptance.</span>
-              <span class="featured-post-cta">Read the post -&gt;</span>
-            </a>
-          </section>
-          
-          <main class="quarto-blog-content">
-                        <h2>Blog</h2>
-                        
+        <main class="content">
+
+          <a class="featured" href="blog/icml-update.html">
+            <span class="featured-post-kicker">Latest Post</span>
+            <span class="featured-post-title">An ICML Update</span>
+            <span class="featured-post-summary">A quick update on a recent ICML submission: the reviews were great, and I am excited about the path to final acceptance.</span>
+            <span class="featured-post-cta">Read the post →</span>
+          </a>
+
+          <article class="post">
+            <h1 class="post-title">Blog</h1>
+
 <p>Thoughts on neuroscience, computation, and everything in between.</p>
 <div class="blog-post-list">
 <div class="blog-post-row">
@@ -69,9 +83,9 @@
 </div>
 </div>
 </div>
-          </main>
+          </article>
 
-          <section class="signup-section blog-signup" aria-labelledby="mailing-list-title">
+          <section class="blog-signup" aria-labelledby="mailing-list-title">
             <p class="signup-kicker">Mailing List</p>
             <h2 class="signup-title" id="mailing-list-title">Stay updated</h2>
             <p class="signup-copy">
@@ -85,7 +99,7 @@
               <input type="text" name="_honey" style="display:none">
               <label class="signup-label" for="mailing-list-email">Email address</label>
               <div class="signup-form-row">
-                <input class="signup-input" autocomplete="email" id="mailing-list-email" name="email" placeholder="you@example.com" required="" type="email">
+                <input class="signup-input" autocomplete="email" id="mailing-list-email" name="email" placeholder="you@example.com" required type="email">
                 <button class="signup-button" type="submit">Join</button>
               </div>
               <p class="signup-feedback" aria-live="polite"></p>
@@ -93,15 +107,12 @@
           </section>
 
           <footer class="blog-footer">
-            <p>
-              Template from <a href="https://github.com/jonbarron/jonbarron.github.io">Jon Barron</a>.
-            </p>
+            <p>Aarav Sinha &middot; Katy, Texas</p>
           </footer>
 
-        </td>
-      </tr>
-    </tbody></table>
+        </main>
+      </div>
+    </div>
     <script src="script.js"></script>
-  
-
-</body></html>
+  </body>
+</html>
