@@ -272,14 +272,20 @@
         .then(function (body) {
           var reply = body.reply || 'I could not find an answer from the site context.';
 
-          loadingMessage.classList.remove('is-loading');
-          setMessageContent(loadingMessage, reply, body.citations);
+          if (loadingMessage.parentNode) {
+            loadingMessage.parentNode.removeChild(loadingMessage);
+          }
+          appendMessage('assistant', reply, false, body.citations);
           messages.push({ role: 'assistant', content: reply });
         })
         .catch(function (error) {
-          loadingMessage.classList.remove('is-loading');
-          loadingMessage.classList.add('is-error');
-          loadingMessage.textContent = error.message || getErrorMessage('', 0);
+          var errorMessage;
+
+          if (loadingMessage.parentNode) {
+            loadingMessage.parentNode.removeChild(loadingMessage);
+          }
+          errorMessage = appendMessage('assistant', error.message || getErrorMessage('', 0), false);
+          errorMessage.classList.add('is-error');
           messages.pop();
         })
         .finally(function () {

@@ -5,6 +5,7 @@ site-root: "../"
 canonical-url: "https://aaravsinha.dev/blog/welcome.html"
 form-url: "https://aaravsinha.dev/blog/welcome.html"
 display-date: "March 11, 2026"
+description: "An introduction to my blog on neuroscience, computation, reinforcement learning, and connectomics."
 show-title: true
 ---
 

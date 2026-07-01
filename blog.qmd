@@ -6,10 +6,12 @@ canonical-url: "https://aaravsinha.dev/blog.html"
 form-url: "https://aaravsinha.dev/blog.html"
 body-class: "blog-index"
 show-title: true
-featured-post-url: "blog/icml-update.html"
-featured-post-kicker: "Latest Post"
-featured-post-title: "An ICML Update"
-featured-post-summary: "A quick update on a recent ICML submission: the reviews were great, and I am excited about the path to final acceptance."
+description: "Thoughts on neuroscience, computation, and everything in between."
+og-type: "website"
+featured-post-url: "blog/going-viral.html"
+featured-post-kicker: "Featured"
+featured-post-title: "Going Viral: 100M+ Views on Embodied Brain Emulation"
+featured-post-summary: "Our embodied Drosophila brain emulation at Eon Systems reached 100M+ views across X, LinkedIn, and YouTube — and Elon Musk reacted."
 featured-post-cta: "Read the post →"
 ---
 

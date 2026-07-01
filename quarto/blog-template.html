@@ -8,7 +8,15 @@
     <title>$if(html-title)$$html-title$$else$$title$ - Aarav Sinha$endif$</title>
 
     <meta name="author" content="Aarav Sinha">
+    $if(description)$<meta name="description" content="$description$">$endif$
     $if(canonical-url)$<link rel="canonical" href="$canonical-url$">$endif$
+
+    <meta property="og:type" content="$if(og-type)$$og-type$$else$article$endif$">
+    <meta property="og:title" content="$if(html-title)$$html-title$$else$$title$$endif$">
+    $if(description)$<meta property="og:description" content="$description$">$endif$
+    $if(canonical-url)$<meta property="og:url" content="$canonical-url$">$endif$
+    <meta property="og:image" content="https://aaravsinha.dev/images/$if(og-image)$$og-image$$else$profile.jpg$endif$">
+    <meta name="twitter:card" content="$if(twitter-card)$$twitter-card$$else$summary$endif$">
 
     <link rel="icon" type="image/png" sizes="32x32" href="$site-root$images/favicon-32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="$site-root$images/favicon-16.png">
@@ -23,6 +31,7 @@
   </head>
 
   <body class="blog-page$if(body-class)$ $body-class$$endif$">
+    <a class="skip-link" href="#main-content">Skip to content</a>
     <div class="page">
       <div class="layout">
 
@@ -42,7 +51,7 @@
           </nav>
         </aside>
 
-        <main class="content">
+        <main class="content" id="main-content">
 
           $if(featured-post-url)$
           <a class="featured" href="$featured-post-url$">

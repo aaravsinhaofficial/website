@@ -27,17 +27,40 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&amp;display=swap">
     <link rel="stylesheet" type="text/css" href="stylesheet.css">
 
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Person",
+      "name": "Aarav Sinha",
+      "url": "https://aaravsinha.dev/",
+      "image": "https://aaravsinha.dev/images/profile.jpg",
+      "jobTitle": "Computational neuroscience researcher",
+      "description": "Student researcher in computational neuroscience, connectomics, embodied neural models, and deep reinforcement learning.",
+      "email": "mailto:aaravsinha002@gmail.com",
+      "affiliation": [
+        { "@type": "Organization", "name": "Johns Hopkins University" },
+        { "@type": "Organization", "name": "Eon Systems" }
+      ],
+      "sameAs": [
+        "https://github.com/aaravsinhaofficial",
+        "https://www.linkedin.com/in/aaravsinha1/",
+        "https://scholar.google.com/citations?user=pQ0MDVwAAAAJ&hl=en"
+      ]
+    }
+    </script>
+
     <script data-goatcounter="https://aaravsinha.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
   </head>
 
   <body class="home-page">
+    <a class="skip-link" href="#main-content">Skip to content</a>
     <div class="page">
       <div class="layout">
 
         <!-- Identity rail -->
         <aside class="sidebar">
           <a class="profile-photo-link" data-secret-href="skibidi/index.html" href="images/profile.jpg">
-            <img class="profile-photo" alt="Aarav Sinha" src="images/profile.jpg">
+            <img class="profile-photo" alt="Aarav Sinha" src="images/profile-480.webp" width="480" height="480">
           </a>
           <h1 class="name">Aarav Sinha</h1>
           <p class="tagline">Computational neuroscience</p>
@@ -52,7 +75,7 @@
         </aside>
 
         <!-- Content -->
-        <main class="content">
+        <main class="content" id="main-content">
 
           <!-- Bio -->
           <div class="intro">
@@ -71,18 +94,49 @@
             </p>
           </div>
 
+          <!-- News -->
+          <section class="section" aria-labelledby="news-label">
+            <h2 class="section-label" id="news-label">News</h2>
+            <ul class="news-list">
+              <li class="news-item">
+                <span class="news-date">Mar 2026</span>
+                <p class="news-body">
+                  Eon's embodied Drosophila brain emulation &mdash; the first multi-behavior embodied brain model &mdash; reached 100M+ views across X, LinkedIn, YouTube, and more, and drew a reaction from Elon Musk. I contributed the embodiment layer. <a href="blog/going-viral.html">Read the story →</a>
+                </p>
+              </li>
+              <li class="news-item">
+                <span class="news-date">Mar 2026</span>
+                <p class="news-body">
+                  Two papers accepted to ICML 2026 workshops &mdash; <a href="data/mapshift-controlled-post-intervention-evaluation.pdf">MapShift</a> (RLxF) and <a href="data/ai-scientists-neural-mechanisms-digital-fly.pdf">Can AI Scientists Discover Neural Mechanisms?</a> (GenBio).
+                </p>
+              </li>
+              <li class="news-item">
+                <span class="news-date">2026</span>
+                <p class="news-body">
+                  New preprint: <a href="https://doi.org/10.21203/rs.3.rs-9841779/v1">Credit Bandwidth Lower Bounds for Diffusive Cortical Learning</a> (Research Square).
+                </p>
+              </li>
+              <li class="news-item">
+                <span class="news-date">2025</span>
+                <p class="news-body">
+                  Poster at the Society for Neuroscience (SfN 2025) and a workshop paper at NeurIPS AI for Science on odor plume tracking (Harvard / Kempner Institute).
+                </p>
+              </li>
+            </ul>
+          </section>
+
           <!-- Research -->
           <section class="section" aria-labelledby="research-label">
-            <p class="section-label" id="research-label">Research</p>
+            <h2 class="section-label" id="research-label">Research</h2>
             <p class="section-intro">
               I'm passionate about computational neuroscience, connectomics, embodied neural models, and deep reinforcement learning. My work focuses on understanding how biological neural circuits give rise to behavior, using both data-driven simulations and biologically inspired AI agents.
             </p>
 
             <!-- MapShift -->
             <article class="paper">
-              <img class="paper-thumb" loading="lazy" decoding="async" src="images/mapshift_thumb.png" alt="MapShift paper preview">
+              <img class="paper-thumb" loading="lazy" decoding="async" src="images/mapshift-thumb.webp" width="132" height="132" alt="MapShift paper preview">
               <div class="paper-body">
-                <h2 class="paper-title"><a href="data/mapshift-controlled-post-intervention-evaluation.pdf">MapShift: Controlled Post-Intervention Evaluation for Embodied World Models</a></h2>
+                <h3 class="paper-title"><a href="data/mapshift-controlled-post-intervention-evaluation.pdf">MapShift: Controlled Post-Intervention Evaluation for Embodied World Models</a></h3>
                 <p class="paper-authors"><strong>Aarav Sinha</strong></p>
                 <p class="paper-venue"><em>ICML 2026 RLxF Workshop: Reinforcement Learning from World Feedback</em>, 2026 &mdash; Accepted workshop paper; 40% acceptance rate</p>
                 <p class="paper-links">
@@ -98,9 +152,9 @@
 
             <!-- AI Scientists -->
             <article class="paper">
-              <img class="paper-thumb" loading="lazy" decoding="async" src="images/ai_scientists_thumb.png" alt="AI Scientists paper preview">
+              <img class="paper-thumb" loading="lazy" decoding="async" src="images/ai_scientists-thumb.webp" width="132" height="132" alt="AI Scientists paper preview">
               <div class="paper-body">
-                <h2 class="paper-title"><a href="data/ai-scientists-neural-mechanisms-digital-fly.pdf">Can AI Scientists Discover Neural Mechanisms? Evaluating Agentic Biological Discovery in a Digital Fly</a></h2>
+                <h3 class="paper-title"><a href="data/ai-scientists-neural-mechanisms-digital-fly.pdf">Can AI Scientists Discover Neural Mechanisms? Evaluating Agentic Biological Discovery in a Digital Fly</a></h3>
                 <p class="paper-authors"><strong>Aarav Sinha</strong></p>
                 <p class="paper-venue"><em>ICML 2026 GenBio Workshop: Generative and Agentic AI for Biology</em>, 2026 &mdash; Accepted workshop paper</p>
                 <p class="paper-links">
@@ -116,9 +170,9 @@
 
             <!-- Credit Bandwidth -->
             <article class="paper">
-              <img class="paper-thumb" loading="lazy" decoding="async" src="images/credit_bandwidth_thumb.png" alt="Credit Bandwidth paper preview">
+              <img class="paper-thumb" loading="lazy" decoding="async" src="images/credit_bandwidth-thumb.webp" width="132" height="132" alt="Credit Bandwidth paper preview">
               <div class="paper-body">
-                <h2 class="paper-title"><a href="https://doi.org/10.21203/rs.3.rs-9841779/v1">Credit Bandwidth Lower Bounds for Diffusive Cortical Learning</a></h2>
+                <h3 class="paper-title"><a href="https://doi.org/10.21203/rs.3.rs-9841779/v1">Credit Bandwidth Lower Bounds for Diffusive Cortical Learning</a></h3>
                 <p class="paper-authors"><strong>Aarav Sinha</strong></p>
                 <p class="paper-venue"><em>Research Square Preprint</em>, 2026</p>
                 <p class="paper-links">
@@ -133,9 +187,9 @@
 
             <!-- Odor Plume / NeurIPS -->
             <article class="paper">
-              <img class="paper-thumb" loading="lazy" decoding="async" src="images/odor_plume.png" alt="Odor plume tracking paper preview">
+              <img class="paper-thumb" loading="lazy" decoding="async" src="images/odor_plume-thumb.webp" width="132" height="132" alt="Odor plume tracking paper preview">
               <div class="paper-body">
-                <h2 class="paper-title"><a href="https://openreview.net/forum?id=gKQRv49qtM#discussion">Using Deep Reinforcement Learning to Understand Odor Plume Tracking in Walking and Flying Insects</a></h2>
+                <h3 class="paper-title"><a href="https://openreview.net/forum?id=gKQRv49qtM#discussion">Using Deep Reinforcement Learning to Understand Odor Plume Tracking in Walking and Flying Insects</a></h3>
                 <p class="paper-authors"><strong>Aarav Sinha</strong>, <a href="https://www.linkedin.com/in/satpreetsingh/">Satpreet H. Singh</a></p>
                 <p class="paper-venue"><em>NeurIPS AI for Science Workshop</em>, 2025</p>
                 <p class="paper-links">
@@ -149,9 +203,9 @@
 
             <!-- SfN Poster -->
             <article class="paper">
-              <img class="paper-thumb" loading="lazy" decoding="async" src="images/drosophila.gif" alt="Drosophila brain model preview">
+              <img class="paper-thumb" loading="lazy" decoding="async" src="images/drosophila-thumb.webp" width="132" height="132" alt="Drosophila brain model preview">
               <div class="paper-body">
-                <h2 class="paper-title"><a href="data/sfn_poster_2025.pdf">Towards Embodied Brain Emulations: A Drosophila Connectome-Constrained Brain Model Accurately Predicts Neural Activity and Controls Behavior in a Virtual Environment</a></h2>
+                <h3 class="paper-title"><a href="data/sfn_poster_2025.pdf">Towards Embodied Brain Emulations: A Drosophila Connectome-Constrained Brain Model Accurately Predicts Neural Activity and Controls Behavior in a Virtual Environment</a></h3>
                 <p class="paper-authors">
                   <a href="https://www.linkedin.com/in/scott-harris-phd/">Scott Harris</a>, <strong>Aarav Sinha</strong>, <a href="https://www.linkedin.com/in/susanna-yaeger-weiss/">Susanna Yaeger-Weiss</a>, <a href="https://www.linkedin.com/in/vincent-louvel-0169b1121/">Vincent Louvel</a>, <a href="https://www.linkedin.com/in/philip-shiu/">Philip Shiu</a>
                 </p>
@@ -160,10 +214,29 @@
                   <a href="data/sfn_poster_2025.pdf">PDF</a>
                 </p>
                 <p class="paper-abstract">
-                  A connectome-constrained Drosophila brain model that accurately predicts neural activity and controls behavior in a virtual environment. I contributed to the brain embodiment component of the project at Eon Systems.
+                  A connectome-constrained Drosophila brain model that accurately predicts neural activity and controls behavior in a virtual environment. I contributed to the brain embodiment component of the project at Eon Systems, whose embodied fly emulation later reached 100M+ views online.
                 </p>
               </div>
             </article>
+          </section>
+
+          <!-- Beyond research -->
+          <section class="section" aria-labelledby="projects-label">
+            <h2 class="section-label" id="projects-label">Beyond research</h2>
+            <ul class="projects-list">
+              <li class="projects-item">
+                <strong><a href="https://usaco.org/">USACO Platinum</a></strong>
+                <p>Competitor in the top division of the USA Computing Olympiad.</p>
+              </li>
+              <li class="projects-item">
+                <strong>AI Club &amp; Engineering Club</strong>
+                <p>Founder, Tompkins High School.</p>
+              </li>
+              <li class="projects-item">
+                <strong><a href="https://github.com/aaravsinhaofficial">Open source</a></strong>
+                <p>Competitive-programming solutions and research experiments on GitHub.</p>
+              </li>
+            </ul>
           </section>
 
           <!-- Academic CV -->

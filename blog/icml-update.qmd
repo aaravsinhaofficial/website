@@ -5,6 +5,7 @@ site-root: "../"
 canonical-url: "https://aaravsinha.dev/blog/icml-update.html"
 form-url: "https://aaravsinha.dev/blog/icml-update.html"
 display-date: "March 24, 2026"
+description: "A short, positive update on an ICML 2026 submission and its encouraging reviews."
 show-title: true
 ---
 
