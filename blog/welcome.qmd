@@ -13,4 +13,4 @@ Welcome! I'm starting this blog as a space to share my thoughts on neuroscience,
 
 I'll be writing about topics like computational models of the brain, reinforcement learning, connectomics, and whatever else I find interesting along the way.
 
-Stay tuned for more. In the meantime, feel free to check out my [research and work](../index.html), or reach out via [email](mailto:aaravsinha002@gmail.com).
+Stay tuned for more. In the meantime, feel free to check out my [research and work](../index.html), or reach out via [email](mailto:aarav@eon.systems).

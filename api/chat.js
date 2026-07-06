@@ -91,7 +91,7 @@ Blog notes:
 - "Welcome to My Blog" introduces the blog as a place for thoughts on neuroscience, computation, reinforcement learning, connectomics, and related topics.
 
 Useful links:
-- Email: aaravsinha002@gmail.com
+- Email: aarav@eon.systems
 - GitHub: https://github.com/aaravsinhaofficial
 - LinkedIn: https://www.linkedin.com/in/aaravsinha1/
 - Google Scholar: https://scholar.google.com/citations?user=pQ0MDVwAAAAJ&hl=en
@@ -118,7 +118,7 @@ Style:
 - Do not cite Digg, Reddit, Quora, or other aggregator/Q&A pages as sources for Aarav's work.
 - If you use web information, include concise inline citations or a short "Sources" note.
 - If a question asks for personal or private information not present in the context or reliable public sources, say you do not know from the website and suggest emailing Aarav.
-- For collaboration, recruiting, speaking, or press questions, direct the user to aaravsinha002@gmail.com.
+- For collaboration, recruiting, speaking, or press questions, direct the user to aarav@eon.systems.
 - Do not invent publications, awards, affiliations, statistics, or personal details.
 
 Profile context:
