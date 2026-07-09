@@ -2,6 +2,59 @@
   var profileLink = document.querySelector('.profile-photo-link');
   var mailingForms = document.querySelectorAll('.mailing-list-form');
   var chatbotEndpoint = '/api/chat';
+  var visitEndpoint = '/api/visit';
+
+  function shouldSkipVisitTracking() {
+    return Boolean(
+      navigator.globalPrivacyControl ||
+      navigator.doNotTrack === '1' ||
+      window.doNotTrack === '1'
+    );
+  }
+
+  function getTimezone() {
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+    } catch (error) {
+      return '';
+    }
+  }
+
+  function trackVisit() {
+    var payload;
+    var blob;
+
+    if (shouldSkipVisitTracking()) {
+      return;
+    }
+
+    payload = JSON.stringify({
+      path: window.location.pathname + window.location.search,
+      title: document.title,
+      referrer: document.referrer,
+      timezone: getTimezone()
+    });
+
+    if (navigator.sendBeacon) {
+      blob = new Blob([payload], { type: 'application/json' });
+
+      if (navigator.sendBeacon(visitEndpoint, blob)) {
+        return;
+      }
+    }
+
+    if (window.fetch) {
+      fetch(visitEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: payload,
+        credentials: 'same-origin',
+        keepalive: true
+      }).catch(function () {});
+    }
+  }
 
   if (profileLink) {
     profileLink.addEventListener('click', function (event) {
@@ -332,6 +385,7 @@
   }
 
   if (document.body) {
+    trackVisit();
     setupChatbot();
   }
 }());
