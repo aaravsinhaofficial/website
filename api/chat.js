@@ -59,7 +59,7 @@ Current roles and education:
 - Researcher at Johns Hopkins University in the Dynamical Intelligence Group, studying the computational theory of predictive grid cells in the medial entorhinal cortex.
 - Computational neuroscientist at Eon Systems PBC, working on embodied Drosophila brain models and brain-body-environment simulations.
 - Sophomore at Tompkins High School in Katy, Texas, ranked 5th out of 800+ students with a 4.0 GPA.
-- USACO Platinum competitor, Science Olympiad state medalist, and founder of his school's AI Club and Engineering Club.
+- USACO Gold competitor, Science Olympiad state medalist, and founder of his school's AI Club and Engineering Club.
 
 Previous research:
 - Summer researcher at Harvard University's Kempner Institute, training RNN agents for odor plume tracking.
