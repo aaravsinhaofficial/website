@@ -6,6 +6,17 @@
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f5efe2">
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#211c16">
 
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('theme');
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script>
+
     <title>Aarav Sinha</title>
 
     <meta name="author" content="Aarav Sinha">

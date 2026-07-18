@@ -384,8 +384,106 @@
     });
   }
 
+  function setupThemeToggle() {
+    var root = document.documentElement;
+    var darkQuery = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+    var LIGHT_COLOR = '#f5efe2';
+    var DARK_COLOR = '#211c16';
+    var MOON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path></svg>';
+    var SUN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line><line x1="4.9" y1="4.9" x2="6.3" y2="6.3"></line><line x1="17.7" y1="17.7" x2="19.1" y2="19.1"></line><line x1="2" y1="12" x2="4" y2="12"></line><line x1="20" y1="12" x2="22" y2="12"></line><line x1="4.9" y1="19.1" x2="6.3" y2="17.7"></line><line x1="17.7" y1="6.3" x2="19.1" y2="4.9"></line></svg>';
+    var button = document.createElement('button');
+
+    button.className = 'theme-toggle';
+    button.type = 'button';
+
+    function storedPreference() {
+      try {
+        var value = localStorage.getItem('theme');
+        return (value === 'light' || value === 'dark') ? value : null;
+      } catch (error) {
+        return null;
+      }
+    }
+
+    function storePreference(value) {
+      try {
+        localStorage.setItem('theme', value);
+      } catch (error) {}
+    }
+
+    function systemTheme() {
+      return (darkQuery && darkQuery.matches) ? 'dark' : 'light';
+    }
+
+    function effectiveTheme() {
+      var attr = root.getAttribute('data-theme');
+      return (attr === 'light' || attr === 'dark') ? attr : systemTheme();
+    }
+
+    function updateThemeColor(explicit, resolved) {
+      var metas = document.querySelectorAll('meta[name="theme-color"]');
+      var i;
+      var meta;
+      var media;
+
+      for (i = 0; i < metas.length; i++) {
+        meta = metas[i];
+
+        if (explicit) {
+          meta.setAttribute('content', resolved === 'dark' ? DARK_COLOR : LIGHT_COLOR);
+        } else {
+          media = meta.getAttribute('media') || '';
+          meta.setAttribute('content', media.indexOf('dark') !== -1 ? DARK_COLOR : LIGHT_COLOR);
+        }
+      }
+    }
+
+    function render() {
+      var effective = effectiveTheme();
+      var target = effective === 'dark' ? 'light' : 'dark';
+
+      button.innerHTML = effective === 'dark' ? SUN : MOON;
+      button.setAttribute('aria-label', 'Switch to ' + target + ' theme');
+      button.setAttribute('title', 'Switch to ' + target + ' theme');
+    }
+
+    // The inline <head> script already applied any stored preference; mirror it
+    // in the address-bar chrome and the icon, then let clicks take over.
+    if (storedPreference()) {
+      updateThemeColor(true, effectiveTheme());
+    }
+    render();
+
+    button.addEventListener('click', function () {
+      var next = effectiveTheme() === 'dark' ? 'light' : 'dark';
+
+      root.setAttribute('data-theme', next);
+      storePreference(next);
+      updateThemeColor(true, next);
+      render();
+    });
+
+    if (darkQuery) {
+      var onSystemChange = function () {
+        if (!storedPreference()) {
+          updateThemeColor(false);
+          render();
+        }
+      };
+
+      if (darkQuery.addEventListener) {
+        darkQuery.addEventListener('change', onSystemChange);
+      } else if (darkQuery.addListener) {
+        darkQuery.addListener(onSystemChange);
+      }
+    }
+
+    document.body.appendChild(button);
+  }
+
   if (document.body) {
-    trackVisit();
+    setupThemeToggle();
     setupChatbot();
+    trackVisit();
   }
 }());
