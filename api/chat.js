@@ -17,6 +17,7 @@ const ALLOWED_CITATION_PATTERNS = [
   /github\.com\/aaravsinhaofficial/i,
   /linkedin\.com\/in\/aaravsinha1/i,
   /scholar\.google\.com\/citations\?user=pQ0MDVw/i,
+  /openreview\.net\/forum\?id=e0pSqIqwXO/i,
   /openreview\.net\/forum\?id=gKQRv49qtM/i,
   /doi\.org\/10\.21203\/rs\.3\.rs-9841779\/v1/i,
   /researchsquare\.com\/article\/rs-9841779/i,
