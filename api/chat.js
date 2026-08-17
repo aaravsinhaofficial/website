@@ -20,6 +20,7 @@ const ALLOWED_CITATION_PATTERNS = [
   /openreview\.net\/forum\?id=gKQRv49qtM/i,
   /doi\.org\/10\.21203\/rs\.3\.rs-9841779\/v1/i,
   /researchsquare\.com\/article\/rs-9841779/i,
+  /jmlr\.org\/tmlr/i,
   /genbio-workshop\.github\.io/i,
   /sites\.google\.com\/view\/rlxf-icml2026/i,
   /eon\.systems/i,
@@ -30,6 +31,11 @@ const ALLOWED_CITATION_PATTERNS = [
   /kempnerinstitute\.harvard\.edu/i
 ];
 const PAPER_FILES = [
+  {
+    title: 'Auditing Closed-Loop Learning in Recurrent Neural Networks: Reproduction, Robustness, and Generalization',
+    path: '/data/auditing-closed-loop-learning.pdf',
+    aliases: ['auditing closed-loop learning', 'closed-loop rnn audit', 'reproducibility', 'tmlr']
+  },
   {
     title: 'MapShift: Controlled Post-Intervention Evaluation for Embodied World Models',
     path: '/data/mapshift-controlled-post-intervention-evaluation.pdf',
@@ -66,6 +72,7 @@ Previous research:
 - Student research assistant at the UC Davis Center for Neuroscience.
 
 Detailed research and paper context:
+- "Auditing Closed-Loop Learning in Recurrent Neural Networks: Reproduction, Robustness, and Generalization" by Aarav Sinha, accepted to Transactions on Machine Learning Research (TMLR), 2026. This claim-level reproducibility audit tests closed-loop RNN learning across independent implementation, seed variation, protocol perturbations, coupled-system stability diagnostics, architecture changes, and task transfer. Across 675 paired runs, the transient open-loop deployed-loss peak and coupled-stability signature reproduce reliably, while persistent final-loss divergence and task transfer are more conditional. When explaining it, emphasize why closed-loop learning is hard to reproduce: an agent's actions alter its future inputs, so the relevant dynamics belong to the coupled agent-environment system rather than the RNN alone.
 - "MapShift: Controlled Post-Intervention Evaluation for Embodied World Models" by Aarav Sinha, accepted to the ICML 2026 RLxF Workshop: Reinforcement Learning from World Feedback. This paper introduces an executable benchmark for evaluating embodied world models after controlled environment interventions. It separates three failure modes: stale map reuse, failure to update beliefs after a change, and weak post-change planning. The contribution is a controlled post-intervention evaluation setup with matched environment changes, so model behavior can be attributed to world-model updating and planning rather than incidental task variation. When explaining it, emphasize embodied agents, world models, intervention-controlled evaluation, and why stale internal maps are a problem.
 - "Can AI Scientists Discover Neural Mechanisms? Evaluating Agentic Biological Discovery in a Digital Fly" by Aarav Sinha, accepted to the ICML 2026 GenBio Workshop: Generative and Agentic AI for Biology. This paper proposes a pilot benchmark for agentic biological discovery inside a digital fly system. It frames mechanism discovery as a budgeted loop: form hypotheses, choose experiments, observe outcomes, update beliefs, and make held-out counterfactual predictions. The core question is whether an AI scientist can discover neural mechanisms rather than merely summarize biological text. When explaining it, highlight digital organisms, Drosophila, experiment-planning agents, mechanism discovery, and counterfactual prediction.
 - "Credit Bandwidth Lower Bounds for Diffusive Cortical Learning" by Aarav Sinha, Research Square preprint, 2026. This theory paper studies recurrent credit assignment on cortical graphs under communication constraints. It derives graph-spectral lower bounds for low-bandwidth diffuse and cell-type-specific feedback. The broad motivation is that biological brains cannot broadcast dense backpropagation-like errors everywhere, so cortical learning may be constrained by the bandwidth and geometry of feedback pathways. When explaining it, focus on credit assignment, cortical graph structure, spectral lower bounds, feedback bandwidth, and biologically plausible learning.
