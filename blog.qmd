@@ -20,6 +20,18 @@ Thoughts on neuroscience, computation, and everything in between.
 ::: {.blog-post-list}
 ::: {.blog-post-row}
 ::: {.blog-post-date}
+**Sep 26, 2026**
+:::
+
+::: {.blog-post-summary}
+[MapShift and TMLR at NeurIPS 2026](blog/neurips-2026.html)
+
+MapShift is accepted to NeurIPS 2026’s Evaluations and Datasets Track, and I’ll also present my TMLR paper through MLRC.
+:::
+:::
+
+::: {.blog-post-row}
+::: {.blog-post-date}
 **Mar 24, 2026**
 :::
 
