@@ -8,10 +8,10 @@ body-class: "blog-index"
 show-title: true
 description: "Thoughts on neuroscience, computation, and everything in between."
 og-type: "website"
-featured-post-url: "blog/going-viral.html"
+featured-post-url: "blog/neurips-2026.html"
 featured-post-kicker: "Featured"
-featured-post-title: "Going Viral: 100M+ Views on Embodied Brain Emulation"
-featured-post-summary: "Our embodied Drosophila brain emulation at Eon Systems reached 100M+ views across X, LinkedIn, and YouTube — and Elon Musk reacted."
+featured-post-title: "MapShift and TMLR at NeurIPS 2026"
+featured-post-summary: "MapShift is accepted to NeurIPS 2026’s Evaluations and Datasets Track, and I’ll also present my TMLR paper through MLRC."
 featured-post-cta: "Read the post →"
 ---
 
