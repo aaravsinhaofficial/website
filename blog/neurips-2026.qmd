@@ -13,7 +13,7 @@ show-title: true
 ```{=html}
 <p>I'm super excited to share that my paper, “MapShift: Controlled Post-Intervention Evaluation for Embodied World Models,” has been accepted to NeurIPS 2026’s Evaluations and Datasets Track as a poster (25.8% acceptance rate)! MapShift tests how embodied world models respond to controlled changes in their environments, revealing where their predictions remain reliable and where they break down.</p>
 
-<p>I’ll also be presenting my recently accepted TMLR paper, “Auditing Closed-Loop Learning in RNNs: Reproduction, Robustness, and Generalization,” through the Machine Learning Reproducibility Challenge (MLRC) at NeurIPS! This work examines whether published findings on learning in recurrent neural networks can be reproduced and hold up across different experimental settings. (See paper: <a href="https://lnkd.in/gjbat8-g">https://lnkd.in/gjbat8-g</a>)</p>
+<p>I’ll also be presenting my recently accepted TMLR paper, “Auditing Closed-Loop Learning in RNNs: Reproduction, Robustness, and Generalization,” through the Machine Learning Reproducibility Challenge (MLRC) at NeurIPS! This work examines whether published findings on learning in recurrent neural networks can be reproduced and hold up across different experimental settings. (See paper: <a href="https://openreview.net/forum?id=e0pSqIqwXO">OpenReview</a>)</p>
 
 <p>I'm truly grateful to everyone who’s supported me along the way. Looking forward to sharing both projects in Sydney this December - if you’ll be there, I’d love to connect, chat about what's up in the field, and present my work and learn more about yours!</p>
 ```
