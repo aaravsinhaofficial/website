@@ -1,0 +1,8 @@
+home-browser/
+.env
+.env.*
+.vscode/
+*.cpp
+*.out
+usaco
+node_modules/

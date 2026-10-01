@@ -1,0 +1,34 @@
+name: aarav-home-browser
+
+services:
+  chrome:
+    image: lscr.io/linuxserver/chrome@sha256:7940d0ae507e68d83476ea985300b95eb6b13b258e63696cf1a3b82ec8be6957
+    ports:
+      - "127.0.0.1:3080:3000"
+    volumes:
+      - chrome-profile:/config
+    shm_size: "1gb"
+    restart: unless-stopped
+    environment:
+      TZ: America/Chicago
+      CHROME_CLI: https://www.google.com
+      HARDEN_DESKTOP: "true"
+      HARDEN_OPENBOX: "true"
+      SELKIES_MODE: websockets
+      SELKIES_ENABLE_DUAL_MODE: "false|locked"
+      SELKIES_ENABLE_SHARING: "false|locked"
+      SELKIES_ENABLE_COLLAB: "false|locked"
+      SELKIES_ENABLE_SHARED: "false|locked"
+      SELKIES_COMMAND_ENABLED: "false|locked"
+      SELKIES_UI_SIDEBAR_SHOW_APPS: "false|locked"
+      SELKIES_UI_SIDEBAR_SHOW_SHARING: "false|locked"
+      SELKIES_FILE_TRANSFERS: upload,download
+      SELKIES_UI_SIDEBAR_SHOW_FILES: "true|locked"
+      SELKIES_UI_TITLE: Home Browser
+      SELKIES_ENCODER: h264enc,jpeg
+      SELKIES_FRAMERATE: "30,8-60"
+      SELKIES_CLIPBOARD_SEAMLESS: "false"
+      PELORUS: "false"
+
+volumes:
+  chrome-profile:

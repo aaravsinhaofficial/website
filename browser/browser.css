@@ -1,0 +1,88 @@
+:root {
+  color-scheme: dark;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #111415;
+  color: #eceded;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; }
+button, a { -webkit-tap-highlight-color: transparent; }
+button { font: inherit; }
+button, a { touch-action: manipulation; }
+button:focus-visible, a:focus-visible { outline: 2px solid #b6c9a4; outline-offset: 4px; }
+.browser-shell { display: flex; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden; }
+.toolbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; min-height: 66px; padding: 10px max(22px, env(safe-area-inset-right)) 10px max(22px, env(safe-area-inset-left)); border-bottom: 1px solid #2b3030; background: #171b1c; flex-shrink: 0; }
+.identity, .controls, .control, .connection-status { display: flex; align-items: center; }
+.identity { gap: 12px; min-width: 0; }
+.brand-icon { color: #bbcca9; flex-shrink: 0; }
+h1 { font-size: 14px; font-weight: 600; line-height: 1.3; white-space: nowrap; margin: 0; letter-spacing: -.15px; }
+.connection-status { gap: 7px; margin-left: 6px; padding-left: 18px; border-left: 1px solid #343a3b; font-size: 12px; color: #a8b0b1; white-space: nowrap; }
+#status-label { overflow: hidden; text-overflow: ellipsis; }
+.status-dot { width: 6px; height: 6px; border-radius: 50%; background: #c6ad7e; flex-shrink: 0; }
+.connection-status[data-state="online"] .status-dot { background: #abc48f; box-shadow: 0 0 9px #abc48f30; }
+.connection-status[data-state="offline"] .status-dot { background: #d39982; }
+.connection-status[data-state="loading"] .status-dot { animation: pulse 1.5s ease-in-out infinite; }
+.controls { gap: 6px; }
+.control { gap: 7px; padding: 9px 11px; color: #b9c0c1; background: transparent; border: 1px solid transparent; border-radius: 6px; text-decoration: none; font-size: 12px; line-height: 18px; white-space: nowrap; cursor: pointer; transition: background 120ms, color 120ms; }
+.control:hover { background: #272e2f; color: #fff; }
+.control:disabled { opacity: .45; cursor: wait; }
+.direct-link { border-color: #394142; margin-left: 5px; }
+.workspace { min-height: 0; flex: 1; position: relative; background: #111415; }
+#remote-browser { width: 100%; height: 100%; display: block; border: 0; background: #fff; }
+.connection-screen { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; overflow: auto; padding: 36px 24px max(36px, env(safe-area-inset-bottom)); background: radial-gradient(ellipse at 50% 36%, #212929 0, #141819 40%, #111415 74%); }
+.connection-card { text-align: center; max-width: 400px; margin: auto; }
+.screen-symbol { color: #b2c5a2; border: 1px solid #3b4840; width: 76px; height: 76px; border-radius: 22px; display: grid; place-items: center; margin: 0 auto 31px; background: linear-gradient(150deg, #323d3260, #1b252930); box-shadow: 0 8px 36px #00000014; }
+.eyebrow { color: #a5b2a2; font-size: 10px; font-weight: 500; letter-spacing: 2.2px; margin: 0 0 17px; }
+h2 { font-size: clamp(25px, 4vw, 32px); line-height: 1.2; font-weight: 500; letter-spacing: -.85px; margin: 0 0 16px; }
+.screen-description { margin: 0 auto; color: #a8b1b1; font-size: 14px; line-height: 1.7; max-width: 345px; }
+.loading-indicator { display: flex; justify-content: center; gap: 5px; margin: 27px 0 0; }
+.loading-indicator span { height: 4px; width: 4px; background: #b6c9a4; border-radius: 50%; animation: pulse 1.5s ease-in-out infinite; }
+.loading-indicator span:nth-child(2) { animation-delay: .18s; }
+.loading-indicator span:nth-child(3) { animation-delay: .36s; }
+.retry-button { color: #172014; font-size: 13px; font-weight: 600; background: #b9cda6; border: 1px solid #b9cda6; border-radius: 7px; padding: 11px 17px; margin: 27px 0 0; cursor: pointer; }
+.retry-button span { padding-left: 16px; }
+.retry-button:hover { background: #cadaBB; }
+.screen-note { margin: 39px auto 0; max-width: 305px; padding-top: 23px; border-top: 1px solid #2d3535; font-size: 12px; line-height: 1.7; color: #879293; }
+.connection-notice { position: absolute; bottom: max(18px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); max-width: calc(100% - 32px); width: max-content; padding: 11px 15px; border: 1px solid #464c46; border-radius: 8px; background: #202725f5; color: #e0e7da; font-size: 12px; line-height: 1.6; box-shadow: 0 4px 20px #0003; }
+.noscript-message { position: absolute; inset: 0; display: grid; place-items: center; padding: 30px; background: #111415; text-align: center; }
+@keyframes pulse { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
+
+@media (max-width: 850px) {
+  .toolbar { gap: 10px; padding-left: max(14px, env(safe-area-inset-left)); padding-right: max(14px, env(safe-area-inset-right)); }
+  .identity { gap: 9px; flex-wrap: wrap; }
+  .connection-status { padding: 0; border: 0; margin-left: 0; width: 100%; padding-left: 31px; margin-top: -4px; font-size: 10px; }
+  .control { padding: 9px 8px; }
+  .controls { gap: 2px; }
+}
+
+@media (max-width: 540px) {
+  .toolbar { min-height: 72px; }
+  .brand-icon { width: 19px; }
+  h1 { font-size: 12px; }
+  .connection-status { padding-left: 28px; font-size: 9px; }
+  .control { min-height: 38px; min-width: 38px; justify-content: center; }
+  .control:not(.direct-link) span { display: none; }
+  .direct-link { font-size: 10px; padding: 8px; gap: 6px; }
+  .direct-link svg { width: 13px; }
+  .identity { flex: 1; max-width: 180px; }
+  .screen-symbol { margin-bottom: 25px; }
+}
+
+@media (max-height: 540px) and (orientation: landscape) {
+  .connection-screen { padding: 20px; }
+  .screen-symbol { display: none; }
+  .screen-note { margin-top: 20px; padding-top: 15px; }
+}
+
+@media (max-width: 380px) {
+  .direct-link span { display: none; }
+  .direct-link svg { width: 15px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow, noarchive">
+  <title>Unlock home browser</title>
+  <style nonce="{{NONCE}}">
+    :root{color-scheme:dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#111216;color:#f2f1ed}*{box-sizing:border-box}body{margin:0;min-height:100svh;display:grid;place-items:center;padding:28px}.panel{width:min(100%,390px)}.mark{width:44px;height:44px;border:1px solid #424449;border-radius:12px;display:grid;place-items:center;margin-bottom:26px;color:#b5c8b0}.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.19em;color:#9eaaa0;margin:0 0 12px}h1{font-size:30px;letter-spacing:-.045em;font-weight:550;margin:0 0 12px}p{line-height:1.6;color:#aaaeb5;font-size:14px;margin:0 0 26px}label{display:block;font-size:12px;font-weight:600;margin-bottom:10px}input,button{font:inherit;width:100%;border-radius:8px;padding:14px 15px}input{border:1px solid #424449;background:#191b20;color:#fff;outline:none}input:focus{border-color:#bad0b7;box-shadow:0 0 0 3px #bad0b71a}button{margin-top:13px;border:0;background:#c6d5ba;color:#152011;font-weight:600;cursor:pointer}button:hover{background:#d3e1c9}button:disabled{opacity:.55;cursor:wait}.status{min-height:24px;margin:15px 0 0;color:#ecb8a6;font-size:13px}.note{font-size:11px;color:#727983;margin-top:25px;border-top:1px solid #2a2c31;padding-top:18px}svg{width:20px;height:20px}
+  </style>
+</head>
+<body>
+  <main class="panel">
+    <div class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V6a4 4 0 0 1 8 0v4m-4 4v3"/></svg></div>
+    <p class="eyebrow">Private connection</p>
+    <h1>Your browser, back home.</h1>
+    <p>Unlock Chrome running on your home connection. Your browsing session stays on your home computer.</p>
+    <form method="post" action="/auth/login">
+      <label for="password">Browser password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required maxlength="1024" autofocus>
+      <button type="submit">Unlock browser <span aria-hidden="true">→</span></button>
+      <p class="status" role="status" aria-live="polite"></p>
+    </form>
+    <p class="note">Access locks automatically after 12 hours. Keep your password private.</p>
+  </main>
+  <script nonce="{{NONCE}}">
+    const form = document.querySelector('form');
+    const button = document.querySelector('button');
+    const status = document.querySelector('.status');
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      button.disabled = true;
+      status.textContent = '';
+      try {
+        const response = await fetch('/auth/login', {
+          method: 'POST', credentials: 'same-origin',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({password: form.password.value})
+        });
+        if (response.ok) {
+          form.password.value = '';
+          const session = await fetch('/auth/session', {credentials: 'same-origin'});
+          if (!session.ok) {
+            status.textContent = 'Your browser blocked the session cookie. Open the home browser in a new tab to unlock it.';
+            return;
+          }
+          location.replace('/');
+        } else if (response.status === 429) {
+          status.textContent = 'Too many attempts. Please try again in a few minutes.';
+        } else {
+          status.textContent = 'That password did not work. Please try again.';
+        }
+      } catch {
+        status.textContent = 'The home connection is unavailable. Please try again shortly.';
+      } finally {
+        button.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

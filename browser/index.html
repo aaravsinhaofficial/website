@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="robots" content="noindex, nofollow, noarchive">
+    <meta name="referrer" content="no-referrer">
+    <meta name="theme-color" content="#111415">
+    <title>Home browser</title>
+    <link rel="icon" type="image/png" href="/images/favicon-32.png">
+    <link rel="stylesheet" href="/browser/browser.css">
+    <script src="/browser/browser.js" defer></script>
+  </head>
+  <body>
+    <div class="browser-shell" id="browser-shell">
+      <header class="toolbar">
+        <div class="identity">
+          <svg class="brand-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1V10Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+          </svg>
+          <h1>Home browser</h1>
+          <span class="connection-status" id="connection-status" data-state="loading" role="status">
+            <span class="status-dot" aria-hidden="true"></span>
+            <span id="status-label">Finding home…</span>
+          </span>
+        </div>
+        <nav class="controls" aria-label="Browser controls">
+          <button class="control" id="lock" type="button" title="Lock your home browser" aria-label="Lock your home browser" hidden>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 4v3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+            <span>Lock</span>
+          </button>
+          <button class="control" id="reconnect" type="button" title="Reconnect to your home browser" aria-label="Reconnect to your home browser">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5M6.2 6.2A8 8 0 0 1 20 12M4 12a8 8 0 0 0 13.8 5.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>Reconnect</span>
+          </button>
+          <button class="control" id="fullscreen" type="button" title="Enter full screen" aria-label="Enter full screen" hidden>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span id="fullscreen-label">Full screen</span>
+          </button>
+          <a class="control direct-link" id="open-directly" target="_blank" rel="noopener noreferrer" title="Open home browser in a new tab" aria-label="Open home browser in a new tab" hidden>
+            <span>Open directly</span>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M14 3h7v7m0-7L10 14m0-9H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+        </nav>
+      </header>
+
+      <main class="workspace" aria-label="Remote home browser" id="workspace" aria-busy="true">
+        <iframe id="remote-browser" title="Private browser running on your home computer" allow="fullscreen; clipboard-read; clipboard-write; microphone; autoplay" allowfullscreen referrerpolicy="no-referrer" hidden></iframe>
+        <section class="connection-screen" id="connection-screen" aria-labelledby="screen-title" aria-describedby="screen-description">
+          <div class="connection-card">
+            <div class="screen-symbol" aria-hidden="true">
+              <svg width="38" height="38" viewBox="0 0 40 40" fill="none"><rect x="4.5" y="6.5" width="31" height="22" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M14 34h12m-6-5.5V34" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="20" cy="17.5" r="4.5" stroke="currentColor" stroke-width="1.5"/><path d="m18.5 17.5 1 1 2-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <p class="eyebrow">YOUR CONNECTION HOME</p>
+            <h2 id="screen-title">Your browser, back home.</h2>
+            <p class="screen-description" id="screen-description">Finding the browser running on your home computer.</p>
+            <div class="loading-indicator" id="loading-indicator" aria-hidden="true"><span></span><span></span><span></span></div>
+            <button class="retry-button" id="retry" type="button" hidden>Try again <span aria-hidden="true">↗</span></button>
+            <p class="screen-note" id="screen-note">Your home computer needs to stay on and connected to the internet.</p>
+          </div>
+        </section>
+        <div class="connection-notice" id="connection-notice" role="status" hidden></div>
+        <noscript><div class="noscript-message">Turn on JavaScript to connect to your home browser.</div></noscript>
+      </main>
+    </div>
+  </body>
+</html>
