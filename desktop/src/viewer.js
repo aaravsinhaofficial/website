@@ -50,15 +50,10 @@ async function check() {
     const state = await api('/auth/status');
     if (!active || run !== generation) return;
     $('lock').disabled = !state.authenticated;
-    if (state.enrollmentRequired) {
-      status('Setup needed');
-      panel('One last step on your Mac.', 'Finish the private authenticator setup on your home laptop to enable desktop access.');
-      retry(); return;
-    }
     if (!state.authenticated) {
       credentials = null;
       status('Locked');
-      panel('Unlock your desktop.', 'Enter your website password and the six-digit code from your authenticator.', 'login');
+      panel('Unlock your desktop.', 'Enter your website password to connect to your Mac.', 'login');
       return;
     }
     if (!state.desktopAvailable) {
@@ -123,10 +118,10 @@ $('login').addEventListener('submit', async event => {
   const button = event.currentTarget.querySelector('button'); button.disabled = true;
   $('error').textContent = '';
   try {
-    await api('/auth/login', {password: $('password').value, code: $('code').value});
-    $('password').value = ''; $('code').value = '';
+    await api('/auth/login', {password: $('password').value});
+    $('password').value = '';
     active = true; retryDelay = 1500; await check();
-  } catch (error) { $('error').textContent = error.message; $('code').value = ''; }
+  } catch (error) { $('error').textContent = error.message; }
   finally { button.disabled = false; }
 });
 $('mac-login').addEventListener('submit', event => {

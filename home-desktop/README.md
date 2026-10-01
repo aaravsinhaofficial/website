@@ -11,10 +11,9 @@ The Mac's built-in Screen Sharing performs its own ARD authentication. Enter the
 ## Initial setup
 
 1. Install dependencies with `npm ci` in the repository root. Keep the existing Home Browser supervisor installed.
-2. Run `node home-desktop/enroll.mjs setup`. It creates a private configuration outside this repository, using the current Home Browser password hash and a separate session secret and authenticator secret. Re-running it preserves existing configuration.
-3. Run `node home-desktop/enroll.mjs enroll` and open the local address it prints on the home Mac. Add the QR code to your authenticator and confirm its six-digit code. Enrollment is available only on loopback, expires after 15 minutes, and is never exposed through the tunnel.
-4. Restart the Home Browser gateway process after initial configuration. The launchd supervisor recreates it; the browser's Chrome container does not need to restart.
-5. Open `/desktop`, enter the existing website password plus a fresh authenticator code, then enter the Mac's login when asked.
+2. Run `node home-desktop/setup.mjs`. It creates a private configuration outside this repository, using the current Home Browser password hash and a separate session secret. Re-running it preserves existing configuration.
+3. Restart the Home Browser gateway process after initial configuration. The launchd supervisor recreates it; the browser's Chrome container does not need to restart.
+4. Open `/desktop`, enter the existing website password, then enter the Mac account name and password when asked.
 
 Native Screen Sharing must be enabled in System Settings → General → Sharing, with access restricted to the intended Mac account. Do not configure router port forwarding for VNC. The gateway always uses loopback; VNC remains protected by macOS account authentication.
 
@@ -30,7 +29,6 @@ Standard VNC does not provide Apple's High Performance screen-sharing transport 
 
 - Build frontend: `npm run build:desktop` (commit the generated `desktop/desktop.js` and license).
 - Tests: `npm run test:browser`, `npm run test:desktop`, and `npm test --prefix home-browser/gateway`.
-- Private state: `~/Library/Application Support/aarav-home-desktop/config.json` (0600 in a 0700 directory). Never commit or publish it. It contains the authenticator secret; a backup of it is sensitive.
+- Private state: `~/Library/Application Support/aarav-home-desktop/config.json` (0600 in a 0700 directory). It contains the password hash and session secret. Never commit or publish it; keep any backup private.
 - The desktop password hash is copied at initial setup. Later browser password changes do not automatically change the desktop password.
-- If the authenticator is lost, a local administrator can re-enroll by deliberately replacing the desktop authentication configuration. There is no public password-only recovery or remote registration endpoint.
 - Bundled noVNC is licensed under MPL-2.0; see `desktop/novnc-LICENSE.txt`. Its source is available through the pinned `@novnc/novnc` npm dependency.

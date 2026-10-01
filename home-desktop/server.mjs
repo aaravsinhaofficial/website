@@ -75,18 +75,18 @@ async function loginBody(req, timeoutMs) {
   let body;
   try { body = JSON.parse(raw); } catch { throw Object.assign(new Error(), { status: 400 }); }
   if (!body || Array.isArray(body) || typeof body.password !== 'string' || !body.password.length ||
-      Buffer.byteLength(body.password) > 1024 || typeof body.code !== 'string' || !/^\d{6}$/.test(body.code)) {
+      Buffer.byteLength(body.password) > 1024) {
     throw Object.assign(new Error(), { status: 400 });
   }
   return body;
 }
 
-/** Dedicated HTTP/WS gateway; no public enrollment, static files, or target selection. */
+/** Dedicated password-protected HTTP/WS gateway with a fixed local VNC target. */
 export function createDesktopGateway(options = {}) {
   const configPath = options.configPath ?? process.env.HOME_DESKTOP_CONFIG ?? join(homedir(), 'Library', 'Application Support', 'aarav-home-desktop', 'config.json');
   const browserConfigPath = options.browserConfigPath ?? join(homedir(), 'Library', 'Application Support', 'aarav-home-browser', 'config.json');
   const now = options.now ?? Date.now;
-  const auth = createDesktopAuth({ configPath, now });
+  const auth = createDesktopAuth({ configPath });
   const sessionTtlMs = Math.max(1, Math.min(options.sessionTtlMs ?? MAX_SESSION_MS, MAX_SESSION_MS));
   const bodyTimeoutMs = Math.max(1, Math.min(options.loginBodyTimeoutMs ?? 10_000, 10_000));
   const connectTimeoutMs = Math.max(1, Math.min(options.connectTimeoutMs ?? 2000, 2000));
@@ -172,7 +172,7 @@ export function createDesktopGateway(options = {}) {
     const session = sessions.get(id);
     if (!session) return null;
     const state = auth.state();
-    if (!state.enrolled || state.fingerprint !== session.fingerprint || session.expiresAt <= now()) {
+    if (state.fingerprint !== session.fingerprint || session.expiresAt <= now()) {
       destroySession(id);
       return null;
     }
@@ -278,8 +278,8 @@ export function createDesktopGateway(options = {}) {
       }
       if (req.method === 'POST' && !ctx.origins.has(req.headers.origin)) return failure(res, 403, 'request_denied', 'Desktop request denied.');
       if (path === '/auth/status' && req.method === 'GET') {
-        const state = auth.state();
-        return reply(res, 200, { authenticated: Boolean(getSession(req)), enrollmentRequired: !state.enrolled, desktopAvailable: await desktopAvailable() });
+        auth.state(); // Invalid private configuration must fail closed even without a cookie.
+        return reply(res, 200, { authenticated: Boolean(getSession(req)), desktopAvailable: await desktopAvailable() });
       }
       if (path === '/health' && req.method === 'GET') {
         const available = await desktopAvailable();
@@ -288,13 +288,12 @@ export function createDesktopGateway(options = {}) {
       if (path === '/auth/login' && req.method === 'POST') {
         const retryAfter = checkRate(req);
         if (retryAfter) return failure(res, 429, 'rate_limited', 'Too many attempts. Try again later.', { 'Retry-After': String(retryAfter), Connection: 'close' });
-        if (!auth.state().enrolled) return failure(res, 403, 'enrollment_required', 'Desktop authentication must be enrolled locally.', { Connection: 'close' });
         pendingLogins += 1;
         try {
           const body = await loginBody(req, bodyTimeoutMs);
           if (sessions.size >= 64) return failure(res, 503, 'unavailable', 'Desktop gateway is unavailable.');
-          const state = await auth.authenticate(body.password, body.code);
-          if (!state) return failure(res, 401, 'invalid_credentials', 'Password or authenticator code was not accepted.');
+          const state = await auth.authenticate(body.password);
+          if (!state) return failure(res, 401, 'invalid_credentials', 'Password was not accepted.');
           if (closing || res.destroyed) return failure(res, 503, 'unavailable', 'Desktop gateway is unavailable.');
           const previous = getSession(req);
           if (previous) destroySession(previous.id);
@@ -354,7 +353,7 @@ export function createDesktopGateway(options = {}) {
     let state;
     try { state = auth.state(); } catch {}
     for (const [id, session] of sessions) {
-      if (!state?.enrolled || state.fingerprint !== session.fingerprint || session.expiresAt <= now()) destroySession(id);
+      if (!state || state.fingerprint !== session.fingerprint || session.expiresAt <= now()) destroySession(id);
     }
   }, 1000);
   sweep.unref();

@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 const source = (await readFile(new URL('../desktop/src/viewer.js', import.meta.url), 'utf8')).replace(/^import RFB[^\n]+\n/, '');
 const settle = () => new Promise(resolve => setImmediate(resolve));
-async function viewer(initial = {authenticated:true, enrollmentRequired:false, desktopAvailable:true}) {
+async function viewer(initial = {authenticated:true, desktopAvailable:true}) {
   const elements = new Map(), clients = [], requests = [], timers = new Map();
   let authState = initial, nextTimer = 0, logoutOk = true;
   function target() { return {events:new Map(), addEventListener(name, fn){this.events.set(name, fn);}, async dispatch(name, detail){await this.events.get(name)?.({detail, preventDefault(){}, currentTarget:this});await settle();}}; }
@@ -25,10 +25,15 @@ async function viewer(initial = {authenticated:true, enrollmentRequired:false, d
   await settle();
   return {el,clients,requests,window,timers,setState(value){authState=value;},failLogout(){logoutOk=false;},async retry(){const [id,fn]=timers.entries().next().value;timers.delete(id);await fn();await settle();}};
 }
-test('desktop only connects after enrollment and both login factors',async()=>{
-  for(const state of [{authenticated:false,enrollmentRequired:true,desktopAvailable:true},{authenticated:false,enrollmentRequired:false,desktopAvailable:true}]){
-    const page=await viewer(state);assert.equal(page.clients.length,0);assert.equal(page.el('login').hidden,state.enrollmentRequired);
-  }
+test('desktop asks for the website password and does not connect before login',async()=>{
+  const page=await viewer({authenticated:false,desktopAvailable:true});
+  assert.equal(page.clients.length,0);assert.equal(page.el('login').hidden,false);
+  page.el('password').value='test-only-website-password';
+  page.setState({authenticated:true,desktopAvailable:true});
+  await page.el('login').dispatch('submit');
+  const login=page.requests.find(request=>request.url.endsWith('/auth/login'));
+  assert.deepEqual(JSON.parse(login.options.body),{password:'test-only-website-password'});
+  assert.equal(page.el('password').value,'');assert.equal(page.clients.length,1);
 });
 test('relay reconnect keeps Mac credentials only in the current page and uses same-origin WSS',async()=>{
   const page=await viewer();const first=page.clients[0];assert.equal(first.url,'wss://aaravsinha.dev/desktop/session/websockify');
@@ -37,7 +42,7 @@ test('relay reconnect keeps Mac credentials only in the current page and uses sa
   await first.dispatch('disconnect',{clean:false});await page.retry();const second=page.clients[1];assert.equal(second.options.credentials.password,'test-only-Mac-password');
   assert.equal(page.requests.some(request=>request.options.body?.includes('test-only-Mac-password')),false);
   await page.el('lock').dispatch('click');assert.equal(second.disconnected,true);assert.equal(page.el('login').hidden,false);
-  page.setState({authenticated:true,enrollmentRequired:false,desktopAvailable:true});await page.el('reconnect').dispatch('click');assert.equal(page.clients[2].options.credentials,undefined);
+  page.setState({authenticated:true,desktopAvailable:true});await page.el('reconnect').dispatch('click');assert.equal(page.clients[2].options.credentials,undefined);
 });
 test('invalid Mac credentials stop retries until an explicit reconnect',async()=>{
   const page=await viewer();await page.clients[0].dispatch('securityfailure');await page.clients[0].dispatch('disconnect',{clean:false});assert.equal(page.timers.size,0);assert.match(page.el('status').textContent,/failed/);

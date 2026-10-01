@@ -8,7 +8,7 @@ import { mkdtemp, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createHomeGateway } from '../home-browser/entry.mjs';
-import { generateTotpSecret, hashPassword } from '../home-desktop/auth.mjs';
+import { hashPassword } from '../home-desktop/auth.mjs';
 
 test('combined gateway dispatches an unbound desktop safely and preserves browser upload timeouts', async t => {
   const directory = await mkdtemp(join(tmpdir(), 'home-gateway-test-'));
@@ -17,7 +17,6 @@ test('combined gateway dispatches an unbound desktop safely and preserves browse
   await writeFile(desktopConfigPath, JSON.stringify({
     passwordHash: await hashPassword('integration-test-password'),
     sessionSecret: randomBytes(32).toString('base64url'),
-    totpSecret: generateTotpSecret(), enrolled: false, lastTotpCounter: -1,
   }), { mode: 0o600 });
   await writeFile(browserConfigPath, JSON.stringify({ publicUrl: '' }), { mode: 0o600 });
   const fakeVnc = net.createServer(socket => socket.end());
@@ -50,7 +49,7 @@ test('combined gateway dispatches an unbound desktop safely and preserves browse
   assert.deepEqual(await (await request('/browser/session/auth/health')).json(), { service: 'browser' });
   const state = await request('/desktop/session/auth/status');
   assert.equal(state.status, 200, 'desktop must validate the outer listener port, not its unbound server address');
-  assert.deepEqual(await state.json(), { authenticated: false, enrollmentRequired: true, desktopAvailable: true });
+  assert.deepEqual(await state.json(), { authenticated: false, desktopAvailable: true });
   assert.deepEqual(browserRequests, ['/browser/session/auth/health']);
   assert.equal((await request('/desktop/session/auth/logout', { method: 'POST' })).status, 403);
   assert.equal((await request('/desktop/session/auth/logout', {
@@ -59,8 +58,8 @@ test('combined gateway dispatches an unbound desktop safely and preserves browse
   assert.equal((await request('/desktop/session/auth/login', { method: 'PUT' })).status, 405);
   assert.equal((await request('/desktop/session/auth/login', {
     method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ password: 'integration-test-password', code: '000000' }),
-  })).status, 403, 'unenrolled desktop cannot issue a session');
+    body: JSON.stringify({ password: 'wrong-integration-password' }),
+  })).status, 401, 'an incorrect website password cannot issue a session');
   const logout = await request('/desktop/session/auth/logout', { method: 'POST', headers: { Origin: origin } });
   assert.equal(logout.status, 200);
   assert.match(logout.headers.get('set-cookie'), /^__Host-home_desktop=;.*Max-Age=0/);

@@ -9,10 +9,9 @@ import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { WebSocket } from 'ws';
 import { createDesktopGateway, DESKTOP_BASE_PATH as BASE } from '../server.mjs';
-import { createDesktopAuth, generateTotpSecret, hashPassword, matchTotpCounter, readDesktopConfig, totpCode, writeDesktopConfig } from '../auth.mjs';
+import { createDesktopAuth, hashPassword, readDesktopConfig, writeDesktopConfig } from '../auth.mjs';
 
 const PASSWORD = 'desktop-test-password';
-const SECRET = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ';
 const HASH = await hashPassword(PASSWORD);
 const ORIGIN = 'https://desktop-fixture.trycloudflare.com';
 const COOKIE = '__Host-home_desktop';
@@ -24,7 +23,6 @@ async function fixture(t, options = {}) {
   const browserConfigPath = join(directory, 'browser.json');
   await writeDesktopConfig(configPath, {
     passwordHash: HASH, sessionSecret: randomBytes(48).toString('base64url'),
-    totpSecret: SECRET, enrolled: options.enrolled ?? true, lastTotpCounter: -1,
   });
   await writeFile(browserConfigPath, JSON.stringify({ publicUrl: ORIGIN }), { mode: 0o600 });
   const tcpSockets = new Set();
@@ -76,8 +74,8 @@ async function fixture(t, options = {}) {
     });
   }
 
-  async function login({ password = PASSWORD, code = totpCode(SECRET, { now: time }), headers } = {}) {
-    const response = await request('/auth/login', { method: 'POST', body: { password, code }, headers });
+  async function login({ password = PASSWORD, headers } = {}) {
+    const response = await request('/auth/login', { method: 'POST', body: { password }, headers });
     return { ...response, cookie: response.headers['set-cookie']?.[0]?.split(';')[0] };
   }
 
@@ -100,58 +98,38 @@ async function rejectedWebsocket(ws) {
   });
 }
 
-test('TOTP matches RFC 6238 SHA-1 vectors and permits only an unused adjacent time step', () => {
-  for (const [seconds, expected] of [[59, '287082'], [1111111109, '081804'], [1111111111, '050471'], [1234567890, '005924'], [2000000000, '279037'], [20000000000, '353130']]) {
-    assert.equal(totpCode(SECRET, { now: seconds * 1000 }), expected);
-  }
-  const counter = Math.floor(TIME / 30_000);
-  for (const shift of [-1, 0, 1]) {
-    const code = totpCode(SECRET, { counter: counter + shift });
-    assert.equal(matchTotpCounter(SECRET, code, { now: TIME }), counter + shift);
-    assert.equal(matchTotpCounter(SECRET, code, { now: TIME, lastCounter: counter + shift }), null);
-  }
-  assert.equal(matchTotpCounter(SECRET, totpCode(SECRET, { counter: counter - 2 }), { now: TIME }), null);
-  assert.match(generateTotpSecret(), /^[A-Z2-7]{32}$/);
-});
-
-test('status exposes only booleans and unenrolled authentication fails closed', async t => {
-  const f = await fixture(t, { enrolled: false });
-  const status = await f.request();
-  assert.deepEqual(status.data, { authenticated: false, enrollmentRequired: true, desktopAvailable: true });
-  const login = await f.login();
-  assert.equal(login.status, 403);
-  assert.equal(login.data.error.code, 'enrollment_required');
-  assert.equal(login.cookie, undefined);
-  assert.equal(await rejectedWebsocket(f.websocket()), 401);
-  assert.equal(readDesktopConfig(f.configPath).lastTotpCounter, -1);
-});
-
-test('password and TOTP are both required; only successful login consumes the code', async t => {
+test('status exposes only authentication and desktop availability without granting access', async t => {
   const f = await fixture(t);
+  const status = await f.request();
+  assert.deepEqual(status.data, { authenticated: false, desktopAvailable: true });
+  assert.equal(status.headers['set-cookie'], undefined);
+  assert.equal(await rejectedWebsocket(f.websocket()), 401);
+});
+
+test('password alone authenticates; incorrect, empty, and missing passwords fail', async t => {
+  const f = await fixture(t);
+  const before = await readFile(f.configPath, 'utf8');
   const badPassword = await f.login({ password: 'incorrect' });
-  const badCode = await f.login({ code: '000000' });
   assert.equal(badPassword.status, 401);
-  assert.equal(badCode.status, 401);
-  assert.deepEqual(badPassword.data, badCode.data);
-  assert.equal(readDesktopConfig(f.configPath).lastTotpCounter, -1);
+  assert.equal(badPassword.data.error.code, 'invalid_credentials');
+  assert.equal(badPassword.cookie, undefined);
+  assert.equal((await f.login({ password: '' })).status, 400);
+  assert.equal((await f.request('/auth/login', { method: 'POST', body: {} })).status, 400);
   const login = await f.login();
   assert.equal(login.status, 200);
   assert.match(login.headers['set-cookie'][0], /^__Host-home_desktop=[A-Za-z0-9_.-]+; Path=\/; Max-Age=14400; Secure; HttpOnly; SameSite=Lax$/);
-  assert.equal(readDesktopConfig(f.configPath).lastTotpCounter, Math.floor(TIME / 30_000));
+  assert.equal(await readFile(f.configPath, 'utf8'), before, 'Logging in does not mutate private configuration');
   assert.equal((await stat(f.configPath)).mode & 0o777, 0o600);
   assert.equal((await f.request('/auth/status', { headers: { Cookie: login.cookie } })).data.authenticated, true);
 });
 
-test('accepted codes cannot be replayed concurrently or after a new auth instance starts', async t => {
+test('credential rotation during password verification prevents a stale session', async t => {
   const f = await fixture(t);
-  const auth1 = createDesktopAuth({ configPath: f.configPath, now: () => TIME });
-  const auth2 = createDesktopAuth({ configPath: f.configPath, now: () => TIME });
-  const code = totpCode(SECRET, { now: TIME });
-  const results = await Promise.all([auth1.authenticate(PASSWORD, code), auth2.authenticate(PASSWORD, code)]);
-  assert.equal(results.filter(Boolean).length, 1);
-  const restarted = createDesktopAuth({ configPath: f.configPath, now: () => TIME });
-  assert.equal(await restarted.authenticate(PASSWORD, code), null);
-  f.advance(30_000);
+  const auth = createDesktopAuth({ configPath: f.configPath });
+  const verifying = auth.authenticate(PASSWORD);
+  const current = readDesktopConfig(f.configPath);
+  await writeDesktopConfig(f.configPath, { ...current, sessionSecret: randomBytes(48).toString('base64url') });
+  assert.equal(await verifying, null);
   assert.equal((await f.login()).status, 200);
 });
 
@@ -231,7 +209,6 @@ test('login is rate-limited before expensive credential work', async t => {
   assert.equal(blocked.status, 429);
   assert.equal(blocked.data.error.code, 'rate_limited');
   assert.ok(Number(blocked.headers['retry-after']) > 0);
-  assert.equal(readDesktopConfig(f.configPath).lastTotpCounter, -1);
 });
 
 test('login rejects oversized and non-JSON bodies', async t => {
@@ -264,7 +241,7 @@ test('private configuration permissions and credential rotation fail closed', as
   assert.throws(() => createDesktopAuth({ configPath: f.configPath }), /not private/);
   const status = await f.request();
   assert.equal(status.status, 503);
-  assert.ok(!status.raw.includes(SECRET));
+  assert.ok(!status.raw.includes(current.sessionSecret));
   assert.ok(!status.raw.includes(HASH));
 });
 
