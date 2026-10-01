@@ -132,6 +132,19 @@
       frame.onload = () => {
         if (currentAttempt !== attempt) return;
         clearTimeout(frameTimer);
+        // The same-origin relay returns JSON when home is temporarily offline.
+        // A completed error document must not leave the viewer stuck while the
+        // health endpoint has already recovered on a newly published tunnel.
+        const frameDocument = frame.contentDocument;
+        if (frameDocument?.contentType === 'application/json') {
+          loaded = false;
+          connecting = false;
+          reconnectButton.disabled = false;
+          retryButton.disabled = false;
+          showOffline();
+          schedulePoll();
+          return;
+        }
         loaded = true;
         connecting = false;
         reconnectButton.disabled = false;

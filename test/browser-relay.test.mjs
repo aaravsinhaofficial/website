@@ -260,10 +260,28 @@ test('unavailable discovery fails closed without attempting an upstream request'
   assert.equal(f.received.length, 0);
 });
 
-test('an upstream HTTP failure invalidates discovery immediately', async t => {
-  const f = await fixture(t, { handle: (_req, res) => { res.writeHead(503); res.end('offline'); } });
-  assert.equal((await f.request(`${BASE}/auth/health`)).status, 503);
-  assert.equal(f.invalidations(), 1);
+test('upstream server failures invalidate discovery and replace private tunnel HTML with generic JSON', async t => {
+  let failureStatus = 500;
+  const f = await fixture(t, { handle: (_req, res) => {
+    res.writeHead(failureStatus, {
+      'Content-Type': 'text/html',
+      Location: 'https://private-tunnel.trycloudflare.com/',
+      'Set-Cookie': '__Host-home_browser=untrusted; Path=/',
+    });
+    res.end('<html>Cloudflare error 1033 at https://private-tunnel.trycloudflare.com/<script src="https://third-party.example/error.js"></script></html>');
+  } });
+  for (const status of [500, 502, 503, 530]) {
+    failureStatus = status;
+    const response = await f.request(`${BASE}/auth/health`);
+    assert.equal(response.status, 502);
+    assert.equal(response.headers['content-type'], 'application/json');
+    assert.equal(response.headers['cache-control'], 'no-store');
+    assert.equal(response.headers.location, undefined);
+    assert.equal(response.headers['set-cookie'], undefined);
+    assert.deepEqual(JSON.parse(response.body), { error: 'Home browser connection unavailable.' });
+    assert.equal(/trycloudflare|third-party|<html>|1033/.test(response.body), false);
+  }
+  assert.equal(f.invalidations(), 4);
 });
 
 test('WebSocket handshake timeout closes the stalled upstream and invalidates discovery', async t => {
