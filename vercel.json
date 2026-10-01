@@ -1,0 +1,45 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    {
+      "source": "/pgcpaperprivate",
+      "destination": "/data/pgcpaperprivate.pdf"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/pgcpaperprivate",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/pdf"
+        },
+        {
+          "key": "Content-Disposition",
+          "value": "inline; filename=\"Predictive_Grid_Cell_Coding_Does_Not_Require_Explicit_Planning.pdf\""
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
+        }
+      ]
+    },
+    {
+      "source": "/data/pgcpaperprivate.pdf",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/pdf"
+        },
+        {
+          "key": "Content-Disposition",
+          "value": "inline; filename=\"Predictive_Grid_Cell_Coding_Does_Not_Require_Explicit_Planning.pdf\""
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
+        }
+      ]
+    }
+  ]
+}
