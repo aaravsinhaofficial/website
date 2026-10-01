@@ -1,4 +1,5 @@
 import http from 'node:http';
+import https from 'node:https';
 import { readFileSync } from 'node:fs';
 import { randomBytes, createHmac, scrypt, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
@@ -250,8 +251,16 @@ export function createGateway(options = {}) {
     return 0;
   }
 
-  const proxy = createProxyServer({ target: target.origin, ws: true, changeOrigin: true, xfwd: false, proxyTimeout: 30_000 });
+  const Agent = target.protocol === 'https:' ? https.Agent : http.Agent;
+  const upstreamAgent = new Agent({
+    keepAlive: true, keepAliveMsecs: 1000, scheduling: 'lifo',
+    maxSockets: 64, maxTotalSockets: 64, maxFreeSockets: 8, timeout: 60_000,
+  });
+  const proxy = createProxyServer({ target: target.origin, agent: upstreamAgent, ws: true, changeOrigin: true, xfwd: false, proxyTimeout: 30_000 });
   proxy.on('proxyRes', (upstreamResponse, req, res) => {
+    delete upstreamResponse.headers['keep-alive'];
+    if (req.httpVersionMajor < 2) upstreamResponse.headers.connection = res.shouldKeepAlive ? 'keep-alive' : 'close';
+    else delete upstreamResponse.headers.connection;
     delete upstreamResponse.headers['x-frame-options'];
     const csp = upstreamResponse.headers['content-security-policy'];
     const directives = (Array.isArray(csp) ? csp.join('; ') : csp || '').split(';')
@@ -351,7 +360,9 @@ export function createGateway(options = {}) {
     if (/^\/(?:json|devtools)(?:\/|$)/i.test(pathname)) return reply(res, 404, { error: 'Not found.' });
     if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method) && req.headers.origin !== ctx.origin) return reply(res, 403, { error: 'Origin denied.' });
     prepareProxy(req);
-    proxy.web(req, res);
+    // A closing downstream HTTP connection can still reuse the upstream pool.
+    // Leave the original request/Upgrade headers untouched for WebSockets.
+    proxy.web(req, res, { headers: { connection: 'keep-alive' } });
   });
 
   server.on('connection', socket => {
@@ -385,6 +396,7 @@ export function createGateway(options = {}) {
       closing = true;
       for (const id of sessions.keys()) destroySession(id);
       for (const socket of clientSockets) socket.destroy();
+      upstreamAgent.destroy();
       proxy.close();
       await new Promise((resolve, reject) => server.close(error => error && error.code !== 'ERR_SERVER_NOT_RUNNING' ? reject(error) : resolve()));
     },

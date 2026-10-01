@@ -39,7 +39,14 @@ services:
       # Avoid Retina/HiDPI oversampling: stream near CSS-pixel resolution.
       # Leave scaling_dpi automatic so CSS scaling follows the client's display.
       SELKIES_USE_CSS_SCALING: "true|locked"
-      SELKIES_FRAMERATE: "30,8-30"
+      # Exclude the previous saved 30 fps / CRF 25 defaults so existing viewers
+      # pick up the lighter stream instead of retaining a bandwidth-heavy preset.
+      SELKIES_FRAMERATE: "24,8-24"
+      SELKIES_VIDEO_CRF: "28,28-36"
+      SELKIES_VIDEO_PAINTOVER_CRF: "23,23-27"
+      SELKIES_VIDEO_PAINTOVER_BURST_FRAMES: "1,1-2"
+      # Keep pointer motion local; remote page reactions still need a round trip.
+      SELKIES_USE_BROWSER_CURSORS: "true|locked"
       SELKIES_CLIPBOARD_SEAMLESS: "false"
       PELORUS: "false"
 

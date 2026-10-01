@@ -158,6 +158,69 @@ test('HTTP preserves browser path/query and supports the Vercel rewrite contract
   assert.equal(f.received[3].url, `${BASE}/api/files?path=Desktop%2Fschool`);
 });
 
+test('relay reuses upstream TCP connections even when downstream HTTP connections close', async t => {
+  const f = await fixture(t);
+  const connections = [];
+  f.upstream.on('connection', socket => connections.push(socket));
+  for (let index = 0; index < 6; index += 1) {
+    const response = await f.request(`${BASE}/assets/client-${index}.js`, { headers: { Connection: 'close' } });
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.connection, 'close');
+    assert.equal(f.received.at(-1).headers.connection, 'keep-alive');
+  }
+  assert.equal(connections.length, 1, 'separate viewer requests should share one upstream TCP connection');
+  const upstreamClosed = once(connections[0], 'close');
+  await f.relay.close();
+  await upstreamClosed;
+});
+
+test('only authenticated versioned JS and CSS can be cached privately; CDN caching stays disabled', async t => {
+  const f = await fixture(t, { handle: (req, res) => {
+    const pathname = req.url.split('?')[0];
+    const authorized = req.headers.cookie === COOKIE;
+    const headers = {
+      'Content-Type': pathname.endsWith('.css') ? 'text/css; charset=utf-8' : 'application/javascript',
+      'Cache-Control': 'public, max-age=31536000',
+      'CDN-Cache-Control': 'public, max-age=31536000',
+      'Vercel-CDN-Cache-Control': 'public, max-age=31536000',
+    };
+    let status = authorized ? 200 : 401;
+    if (pathname.includes('html-')) headers['Content-Type'] = 'text/html';
+    if (pathname.includes('cookie-')) headers['Set-Cookie'] = `${COOKIE}; Path=/`;
+    if (pathname.includes('download-')) headers['Content-Disposition'] = 'attachment; filename=download.js';
+    if (pathname.includes('redirect-')) { status = 302; headers.Location = `${BASE}/auth/login`; }
+    res.writeHead(status, headers);
+    res.end(status === 401 ? 'authentication required' : 'static code');
+  } });
+  for (const pathname of [`${BASE}/assets/index-CPWh3fQ6.js`, `${BASE}/assets/index-D97fjY6g.css?version=1`]) {
+    for (const method of ['GET', 'HEAD']) {
+      const response = await f.request(pathname, { method, headers: { Cookie: COOKIE } });
+      assert.equal(response.status, 200);
+      assert.equal(response.headers['cache-control'], 'private, max-age=86400, immutable');
+      assert.equal(response.headers['cdn-cache-control'], 'no-store');
+      assert.equal(response.headers['vercel-cdn-cache-control'], 'no-store');
+    }
+  }
+  const unauthorized = await f.request(`${BASE}/assets/index-CPWh3fQ6.js`);
+  assert.equal(unauthorized.status, 401);
+  assert.equal(unauthorized.headers['cache-control'], 'no-store');
+  for (const pathname of [
+    `${BASE}/auth/login`, `${BASE}/api/state`, `${BASE}/api/files/download/index-CPWh3fQ6.js`,
+    `${BASE}/`, `${BASE}/assets/index.js`, `${BASE}/assets/index-short.js`,
+    `${BASE}/assets/html-CPWh3fQ6.js`, `${BASE}/assets/cookie-CPWh3fQ6.js`,
+    `${BASE}/assets/download-CPWh3fQ6.js`, `${BASE}/assets/redirect-CPWh3fQ6.js`,
+  ]) {
+    const response = await f.request(pathname, { headers: { Cookie: COOKIE } });
+    assert.equal(response.headers['cache-control'], 'no-store', pathname);
+    assert.equal(response.headers['cdn-cache-control'], 'no-store', pathname);
+    assert.equal(response.headers['vercel-cdn-cache-control'], 'no-store', pathname);
+  }
+  const mutation = await f.request(`${BASE}/assets/index-CPWh3fQ6.js`, {
+    method: 'POST', headers: { Cookie: COOKIE, Origin: ORIGIN },
+  });
+  assert.equal(mutation.headers['cache-control'], 'no-store');
+});
+
 test('root endpoint, foreign hosts, traversal, and attempted open-proxy requests are rejected before discovery', async t => {
   let resolutions = 0;
   const f = await fixture(t, { targetResolver: async () => { resolutions += 1; return 'https://some.trycloudflare.com'; } });

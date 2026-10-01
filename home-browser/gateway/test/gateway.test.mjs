@@ -122,6 +122,25 @@ test('wrong password fails; right password authenticates and never reaches upstr
   assert.equal((await request('/', { headers: { Cookie: tampered } })).status, 401);
 });
 
+test('gateway reuses authenticated upstream HTTP connections and closes the pool at shutdown', async t => {
+  const { gateway, upstream, request, received, login } = await fixture(t);
+  const connections = [];
+  upstream.on('connection', socket => connections.push(socket));
+  const cookie = (await login()).headers.get('set-cookie').split(';')[0];
+  for (let index = 0; index < 6; index += 1) {
+    const response = await request(`/assets/client-${index}.js`, { headers: { Cookie: cookie, Connection: 'close' } });
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('connection'), 'close');
+    assert.equal(received.at(-1).headers.connection, 'keep-alive');
+  }
+  assert.equal(connections.length, 1, 'authenticated requests should share one upstream TCP connection');
+  assert.equal((await request('/assets/next.js')).status, 401);
+  assert.equal(received.length, 6, 'a pooled connection must not bypass authentication');
+  const upstreamClosed = once(connections[0], 'close');
+  await gateway.close();
+  await upstreamClosed;
+});
+
 test('public HTTPS cookies are secure and partitioned; unexpected host is rejected', async t => {
   const { login, request } = await fixture(t, { secureCookie: true, publicUrl: 'https://browser.aaravsinha.dev' });
   const good = await login(password, { Host: 'browser.aaravsinha.dev', Origin: 'https://browser.aaravsinha.dev' });

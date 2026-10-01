@@ -61,7 +61,11 @@ The display stream now passes through Vercel and consumes its data-transfer and 
 
 ## Display performance
 
-CSS scaling is enabled to stream near the viewer's CSS-pixel resolution, and the frame rate is capped at 30 fps. At a device-pixel ratio of 2, the same-sized view targets roughly one quarter of the pixels of a full Retina-resolution stream. This reduces encoding and transfer work. Responsiveness still depends on the laptop's load, home upload speed, the viewer's network, and the relay route.
+CSS scaling is enabled to stream near the viewer's CSS-pixel resolution, and the frame rate is capped at 24 fps. At a device-pixel ratio of 2, the same-sized view targets roughly one quarter of the pixels of a full Retina-resolution stream. Motion uses CRF 28, with one CRF 23 cleanup frame for static content. This trades some detail during motion for fewer bytes and smaller refresh bursts. The allowed ranges replace older saved viewer settings rather than leaving the previous heavier defaults active. Browser CSS cursors are locked on so ordinary pointer movement renders locally.
+
+The HTTP relays reuse upstream connections for viewer assets and controls. Only successful, versioned JavaScript/CSS assets can be cached privately by the viewer; login pages, browser state, APIs, and files remain uncached, and shared CDN caching stays disabled. This reduces work when reconnecting without caching private browsing content.
+
+Responsiveness still depends on the laptop's load, home upload speed, the viewer's network, and the relay route. Memory pressure and swapping on the Mac can delay the entire Docker desktop. The remote page's response to a click or key still needs a network round trip even when the pointer itself moves locally. These settings do not guarantee a fixed bitrate or latency.
 
 ## Browser behavior and isolation
 
