@@ -2,6 +2,10 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
+      "source": "/browser/session/",
+      "destination": "/api/browser-relay?__browser_relay_path="
+    },
+    {
       "source": "/browser/session/:path*",
       "destination": "/api/browser-relay?__browser_relay_path=:path*"
     },
