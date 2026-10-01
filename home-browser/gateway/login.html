@@ -15,7 +15,7 @@
     <p class="eyebrow">Private connection</p>
     <h1>Your browser, back home.</h1>
     <p>Unlock Chrome running on your home connection. Your browsing session stays on your home computer.</p>
-    <form method="post" action="/auth/login">
+    <form method="post">
       <label for="password">Browser password</label>
       <input id="password" name="password" type="password" autocomplete="current-password" required maxlength="1024" autofocus>
       <button type="submit">Unlock browser <span aria-hidden="true">→</span></button>
@@ -24,6 +24,7 @@
     <p class="note">Access locks automatically after 12 hours. Keep your password private.</p>
   </main>
   <script nonce="{{NONCE}}">
+    const basePath = {{BASE_PATH_JSON}};
     const form = document.querySelector('form');
     const button = document.querySelector('button');
     const status = document.querySelector('.status');
@@ -32,19 +33,19 @@
       button.disabled = true;
       status.textContent = '';
       try {
-        const response = await fetch('/auth/login', {
+        const response = await fetch(basePath + '/auth/login', {
           method: 'POST', credentials: 'same-origin',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({password: form.password.value})
         });
         if (response.ok) {
           form.password.value = '';
-          const session = await fetch('/auth/session', {credentials: 'same-origin'});
+          const session = await fetch(basePath + '/auth/session', {credentials: 'same-origin'});
           if (!session.ok) {
             status.textContent = 'Your browser blocked the session cookie. Open the home browser in a new tab to unlock it.';
             return;
           }
-          location.replace('/');
+          location.replace(basePath + '/');
         } else if (response.status === 429) {
           status.textContent = 'Too many attempts. Please try again in a few minutes.';
         } else {

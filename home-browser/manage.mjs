@@ -113,7 +113,7 @@ async function install() {
   await mkdir(dirname(plistPath), { recursive: true });
   const escapeXml = (value) => String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
   const s = (value) => `<string>${escapeXml(value)}</string>`;
-  const plist = `<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0"><dict>\n<key>Label</key>${s(label)}\n<key>ProgramArguments</key><array>${s(process.execPath)}${s(join(sourceDir, 'manage.mjs'))}${s('run')}</array>\n<key>WorkingDirectory</key>${s(sourceDir)}\n<key>EnvironmentVariables</key><dict><key>PATH</key>${s(toolPath)}<key>HOME_BROWSER_STATE_DIR</key>${s(stateDir)}</dict>\n<key>RunAtLoad</key><true/>\n<key>KeepAlive</key><true/>\n<key>ThrottleInterval</key><integer>15</integer>\n<key>ExitTimeOut</key><integer>25</integer>\n<key>StandardOutPath</key>${s(join(stateDir, 'supervisor.log'))}\n<key>StandardErrorPath</key>${s(join(stateDir, 'supervisor.log'))}\n</dict></plist>\n`;
+  const plist = `<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0"><dict>\n<key>Label</key>${s(label)}\n<key>ProgramArguments</key><array>${s(process.execPath)}${s(join(sourceDir, 'manage.mjs'))}${s('run')}</array>\n<key>WorkingDirectory</key>${s(sourceDir)}\n<key>EnvironmentVariables</key><dict><key>PATH</key>${s(toolPath)}<key>HOME_BROWSER_STATE_DIR</key>${s(stateDir)}</dict>\n<key>RunAtLoad</key><true/>\n<key>KeepAlive</key><true/>\n<key>ThrottleInterval</key><integer>15</integer>\n<key>ExitTimeOut</key><integer>65</integer>\n<key>StandardOutPath</key>${s(join(stateDir, 'supervisor.log'))}\n<key>StandardErrorPath</key>${s(join(stateDir, 'supervisor.log'))}\n</dict></plist>\n`;
   await writePrivate(plistPath, plist);
   // Create the log privately before launchd opens it.
   const logFile = await open(join(stateDir, 'supervisor.log'), 'a', 0o600);
@@ -131,8 +131,23 @@ async function start() {
 }
 
 async function stop() {
-  await command('/bin/launchctl', ['bootout', launchTarget], { allowFailure: true });
-  await compose(['stop'], { timeout: 25000, allowFailure: true });
+  const saved = await json(lockPath).catch(() => null);
+  const candidate = await processIdentity(typeof saved === 'number' ? saved : saved?.pid);
+  const identity = candidate && candidate.command.endsWith('manage.mjs run') &&
+    (typeof saved === 'number' || candidate.startedAt === saved?.startedAt) ? candidate : null;
+  const deadline = Date.now() + 65000;
+  await command('/bin/launchctl', ['bootout', launchTarget], { allowFailure: true, timeout: 70000 });
+  // The supervisor runs the Compose pre-stop hook itself. Wait for it before
+  // issuing a fallback stop, otherwise two shutdowns can race Chrome's save.
+  if (identity) {
+    while (true) {
+      const current = await processIdentity(identity.pid);
+      if (!current || current.startedAt !== identity.startedAt) break;
+      if (Date.now() >= deadline) throw new Error('Browser shutdown is still in progress. Check the supervisor log before retrying.');
+      await sleep(500);
+    }
+  }
+  await compose(['stop'], { timeout: 55000 });
   console.log('Home Browser stopped. Saved browser data is retained.');
 }
 
@@ -144,7 +159,7 @@ async function status() {
   if (await exists(configPath)) {
     const config = await json(configPath);
     console.log(`Gateway connection: ${config.publicUrl || 'waiting for tunnel'}`);
-    const health = await fetch('http://127.0.0.1:3081/auth/health', { signal: AbortSignal.timeout(2500) }).then((response) => response.ok, () => false);
+    const health = await fetch('http://127.0.0.1:3081/browser/session/auth/health', { signal: AbortSignal.timeout(2500) }).then((response) => response.ok, () => false);
     console.log(`Gateway health: ${health ? 'responding' : 'unavailable'}`);
   }
   console.log(`Private password file: ${accessPath}`);
@@ -222,7 +237,7 @@ async function run() {
     log('Stopping browser services.');
     for (const child of children) child.kill('SIGTERM');
     await setUrl('').catch(() => {});
-    await Promise.allSettled([publish(), compose(['stop'], { timeout: 15000, allowFailure: true })]);
+    await Promise.allSettled([publish(), compose(['stop'], { timeout: 55000 }).catch(() => log('Chrome shutdown failed; check the Compose pre-stop hook before restarting.'))]);
     await rm(lockPath, { force: true });
     process.exit(0);
   }
@@ -278,7 +293,7 @@ async function run() {
     if (url && url !== publicUrl) setUrl(url).catch(() => log('Could not save tunnel URL; waiting for retry.'));
   };
   await Promise.all([
-    supervise('Gateway', process.execPath, [join(sourceDir, 'gateway', 'server.mjs')], { HOME_BROWSER_CONFIG: configPath }),
+    supervise('Gateway', process.execPath, [join(sourceDir, 'gateway', 'server.mjs')], { HOME_BROWSER_CONFIG: configPath, HOME_BROWSER_BASE_PATH: '/browser/session' }),
     supervise('Tunnel', tunnel, ['tunnel', '--no-autoupdate', '--url', 'http://127.0.0.1:3081'], {}, parseTunnel, async () => { tunnelOutput = ''; await setUrl(''); }),
     supervise('Idle sleep protection', '/usr/bin/caffeinate', ['-i']),
   ]);

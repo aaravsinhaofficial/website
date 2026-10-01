@@ -139,6 +139,13 @@ export function createGateway(options = {}) {
   }
   const publicUrlOverride = options.publicUrl ?? env.HOME_BROWSER_PUBLIC_URL;
   parsePublicUrl(publicUrlOverride ?? config.publicUrl);
+  const basePath = env.HOME_BROWSER_BASE_PATH ?? '';
+  if (typeof basePath !== 'string' || basePath.length > 128 ||
+      (basePath !== '' && !/^(?:\/[A-Za-z0-9_-]+)+$/.test(basePath))) {
+    throw new Error('HOME_BROWSER_BASE_PATH must be empty or slash-separated letters, numbers, underscores, and hyphens, without a trailing slash.');
+  }
+  const browserPath = `${basePath}/`;
+  const loginPath = `${basePath}/auth/login`;
   const secureCookie = options.secureCookie ?? env.HOME_BROWSER_COOKIE_SECURE !== 'false';
   const cookieName = secureCookie ? '__Host-home_browser' : 'home_browser';
   const sessionTtlMs = Math.max(1, Math.min(options.sessionTtlMs ?? MAX_SESSION_MS, MAX_SESSION_MS));
@@ -176,6 +183,16 @@ export function createGateway(options = {}) {
   function originAllowed(req, ctx) {
     const origin = req.headers.origin;
     return typeof origin === 'string' && (origin === ctx.origin || WEBSITE_ORIGINS.has(origin));
+  }
+
+  function routePath(req, ctx) {
+    const pathname = new URL(req.url, ctx.origin).pathname;
+    if (!basePath) return pathname;
+    const rawPathname = req.url.split('?')[0];
+    const hasPrefix = value => value === basePath || value.startsWith(`${basePath}/`);
+    // Check both representations so normalization cannot enter or escape the mounted route.
+    if (!hasPrefix(rawPathname) || !hasPrefix(pathname) || rawPathname.includes('\\')) return null;
+    return pathname.slice(basePath.length) || '/';
   }
 
   function corsHeaders(req) {
@@ -272,7 +289,8 @@ export function createGateway(options = {}) {
     const ctx = context(req);
     if (!ctx) return reply(res, 421, { error: 'Unrecognized browser host.' });
     if (!req.url?.startsWith('/') || req.url.startsWith('//')) return reply(res, 400, { error: 'Invalid request path.' });
-    const pathname = new URL(req.url, ctx.origin).pathname;
+    const pathname = routePath(req, ctx);
+    if (pathname === null) return reply(res, 404, { error: 'Not found.' });
     const cors = corsHeaders(req);
     if (pathname.startsWith('/auth/') && req.method === 'OPTIONS') {
       if (!originAllowed(req, ctx)) return reply(res, 403, { error: 'Origin denied.' });
@@ -280,15 +298,17 @@ export function createGateway(options = {}) {
     }
     if (pathname === '/auth/health' && req.method === 'GET') {
       try {
-        const response = await fetch(target, { method: 'HEAD', redirect: 'manual', signal: AbortSignal.timeout(2000) });
-        if (response.status >= 500) return reply(res, 503, { status: 'starting' }, cors);
+        const response = await fetch(new URL(browserPath, target), { method: 'HEAD', redirect: 'manual', signal: AbortSignal.timeout(2000) });
+        if (!response.ok) return reply(res, 503, { status: 'starting' }, cors);
         return reply(res, 200, { status: 'ready' }, cors);
       } catch { return reply(res, 503, { status: 'offline' }, cors); }
     }
     if (pathname === '/auth/login' && req.method === 'GET') {
-      if (getSession(req)) return reply(res, 303, '', { Location: '/' });
+      if (getSession(req)) return reply(res, 303, '', { Location: browserPath });
       const nonce = randomBytes(18).toString('base64url');
-      return reply(res, 200, LOGIN_HTML.replaceAll('{{NONCE}}', nonce), {
+      const html = LOGIN_HTML.replaceAll('{{NONCE}}', nonce)
+        .replaceAll('{{BASE_PATH_JSON}}', JSON.stringify(basePath).replaceAll('<', '\\u003c'));
+      return reply(res, 200, html, {
         'Content-Type': 'text/html; charset=utf-8',
         'Content-Security-Policy': `default-src 'none'; style-src 'nonce-${nonce}'; script-src 'nonce-${nonce}'; connect-src 'self'; form-action 'self'; base-uri 'none'; ${FRAME_POLICY}`,
       });
@@ -323,7 +343,7 @@ export function createGateway(options = {}) {
     }
     const session = getSession(req);
     if (!session) {
-      if (req.method === 'GET' && (req.headers.accept || '').includes('text/html')) return reply(res, 303, '', { Location: '/auth/login' });
+      if (req.method === 'GET' && (req.headers.accept || '').includes('text/html')) return reply(res, 303, '', { Location: loginPath });
       return reply(res, 401, { error: 'Unlock your home browser to continue.' }, cors);
     }
     if (pathname === '/auth/session' && req.method === 'GET') return reply(res, 200, { authenticated: true, expiresAt: session.expiresAt }, cors);
@@ -343,7 +363,8 @@ export function createGateway(options = {}) {
     const deny = code => { socket.end(`HTTP/1.1 ${code} ${code === 401 ? 'Unauthorized' : 'Forbidden'}\r\nConnection: close\r\nContent-Length: 0\r\n\r\n`); };
     const ctx = context(req);
     if (!ctx || req.headers.origin !== ctx.origin || !req.url?.startsWith('/') || req.url.startsWith('//')) return deny(403);
-    const pathname = new URL(req.url, ctx.origin).pathname;
+    const pathname = routePath(req, ctx);
+    if (pathname === null) return deny(403);
     if (/^\/(?:auth|json|devtools)(?:\/|$)/i.test(pathname)) return deny(403);
     const session = getSession(req);
     if (!session) return deny(401);

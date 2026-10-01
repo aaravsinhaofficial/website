@@ -1,10 +1,8 @@
 (() => {
   'use strict';
 
-  // Add an exact hostname here if the home server moves to a permanent domain.
-  // Never accept arbitrary URLs, credentials, ports, paths, or nested subdomains.
-  const ALLOWED_BROWSER_HOSTS = [];
-  const TUNNEL_HOST = /^[a-z0-9]+(?:-[a-z0-9]+)*\.trycloudflare\.com$/;
+  // The server relay discovers the home browser. The viewer stays on this site.
+  const SESSION_BASE = '/browser/session';
   const FETCH_TIMEOUT = 12000;
   const POLL_INTERVAL = 30000;
   const el = (id) => document.getElementById(id);
@@ -15,7 +13,6 @@
   const lockButton = el('lock');
   const directLink = el('open-directly');
   const fullscreenButton = el('fullscreen');
-  let origin = null;
   let attempt = 0;
   let connecting = false;
   let loaded = false;
@@ -51,7 +48,7 @@
     const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
     try {
       const response = await fetch(url, {
-        cache: 'no-store', credentials: 'omit', redirect: 'error',
+        cache: 'no-store', credentials: 'same-origin', redirect: 'error',
         referrerPolicy: 'no-referrer', signal: controller.signal,
       });
       if (!response.ok) throw new Error('Service unavailable');
@@ -61,30 +58,9 @@
     }
   }
 
-  function validateOrigin(value) {
-    if (typeof value !== 'string') throw new Error('Invalid browser address');
-    const url = new URL(value);
-    if (url.protocol !== 'https:' || url.username || url.password || url.port ||
-        url.pathname !== '/' || url.search || url.hash ||
-        !(TUNNEL_HOST.test(url.hostname) || ALLOWED_BROWSER_HOSTS.includes(url.hostname))) {
-      throw new Error('Invalid browser address');
-    }
-    return url.origin;
-  }
-
-  function validateDiscoveryURL(value) {
-    if (typeof value !== 'string') throw new Error('Missing discovery address');
-    const url = new URL(value, window.location.origin);
-    if (url.protocol !== 'https:' || url.username || url.password || url.hash) {
-      throw new Error('Invalid discovery address');
-    }
-    url.searchParams.set('_browser_minute', String(Math.floor(Date.now() / 60000)));
-    return url.href;
-  }
-
-  async function checkHealth(remoteOrigin) {
+  async function checkHealth() {
     // Reachability does not guarantee that the remote browser's video stream works.
-    const health = await fetchJSON(`${remoteOrigin}/auth/health`);
+    const health = await fetchJSON(`${SESSION_BASE}/auth/health`);
     if (health.status !== 'ready') throw new Error('Home browser is not ready');
   }
 
@@ -103,14 +79,13 @@
       schedulePoll();
       return;
     }
-    if (!origin || !loaded) {
+    if (!loaded) {
       await connect();
       return;
     }
-    const checkedOrigin = origin;
     const checkedAttempt = attempt;
     try {
-      await checkHealth(checkedOrigin);
+      await checkHealth();
       if (checkedAttempt !== attempt) return;
       failedHealthChecks = 0;
       setStatus('Home server online', 'online');
@@ -132,7 +107,6 @@
     const currentAttempt = ++attempt;
     connecting = true;
     loaded = false;
-    origin = null;
     directLink.hidden = true;
     directLink.removeAttribute('href');
     lockButton.hidden = true;
@@ -142,24 +116,18 @@
     el('connection-notice').hidden = true;
     reconnectButton.disabled = true;
     retryButton.disabled = true;
-    setStatus('Finding home…', 'loading');
-    showScreen('Your browser, back home.', 'Finding the browser running on your home computer.', { loading: true });
+    setStatus('Connecting to home…', 'loading');
+    showScreen('Your browser, back home.', 'Connecting to your saved browser session.', { loading: true });
 
     try {
-      const config = await fetchJSON('/browser/connection.json');
-      const discovery = await fetchJSON(validateDiscoveryURL(config.discoveryUrl));
-      const nextOrigin = validateOrigin(discovery.url);
+      await checkHealth();
       if (currentAttempt !== attempt) return;
-      origin = nextOrigin;
-      directLink.href = `${origin}/`;
+      directLink.href = `${SESSION_BASE}/`;
       directLink.hidden = false;
       lockButton.hidden = false;
-      setStatus('Connecting to home…', 'loading');
       el('screen-description').textContent = 'Opening a private browser through your home internet.';
-      await checkHealth(origin);
-      if (currentAttempt !== attempt) return;
 
-      // Install this handler only after discovery; an initial about:blank load
+      // Install this handler only after the health check; an initial about:blank load
       // must not count as a response from the home server.
       frame.onload = () => {
         if (currentAttempt !== attempt) return;
@@ -175,14 +143,14 @@
         schedulePoll();
       };
       frame.hidden = false;
-      frame.src = `${origin}/`;
+      frame.src = `${SESSION_BASE}/`;
       frameTimer = setTimeout(() => {
         if (currentAttempt !== attempt || loaded) return;
         connecting = false;
         reconnectButton.disabled = false;
         retryButton.disabled = false;
         setStatus('Browser taking longer', 'offline');
-        showScreen('Still waiting for your browser.', 'Try reconnecting, or choose Open directly above if your browser blocks the embedded session.', { retry: true });
+        showScreen('Still waiting for your browser.', 'Try reconnecting, or choose Open session above to use a separate tab.', { retry: true });
         schedulePoll();
       }, 25000);
     } catch {
@@ -198,22 +166,22 @@
   reconnectButton.addEventListener('click', connect);
   retryButton.addEventListener('click', connect);
   lockButton.addEventListener('click', async () => {
-    if (!origin || lockButton.disabled) return;
-    const lockingOrigin = origin;
+    if (lockButton.disabled) return;
+    const lockingAttempt = attempt;
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
     lockButton.disabled = true;
     try {
-      const response = await fetch(`${lockingOrigin}/auth/logout`, {
-        method: 'POST', credentials: 'include', cache: 'no-store',
+      const response = await fetch(`${SESSION_BASE}/auth/logout`, {
+        method: 'POST', credentials: 'same-origin', cache: 'no-store',
         redirect: 'error', referrerPolicy: 'no-referrer', signal: controller.signal,
       });
       if (!response.ok) throw new Error('Could not lock browser');
-      if (origin === lockingOrigin) frame.src = `${lockingOrigin}/`;
+      if (attempt === lockingAttempt) frame.src = `${SESSION_BASE}/`;
       setStatus('Browser locked', 'online');
       showNotice('Browser locked. Sign in again to continue.');
     } catch {
-      showNotice('Could not confirm that the browser is locked. Open directly and sign out there, or try Lock again.');
+      showNotice('Could not confirm that the browser is locked. Choose Open session and sign out there, or try Lock again.');
     } finally {
       clearTimeout(timeout);
       lockButton.disabled = false;
@@ -227,7 +195,7 @@
         if (document.fullscreenElement) await document.exitFullscreen();
         else await el('browser-shell').requestFullscreen();
       } catch {
-        showNotice('Full screen is unavailable. You can use Open directly for a separate browser tab.');
+        showNotice('Full screen is unavailable. You can use Open session for a separate browser tab.');
       }
     });
     document.addEventListener('fullscreenchange', () => {

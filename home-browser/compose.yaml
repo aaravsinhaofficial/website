@@ -7,11 +7,21 @@ services:
       - "127.0.0.1:3080:3000"
     volumes:
       - chrome-profile:/config
+      - ./chrome-session/graceful-stop.py:/opt/home-browser/graceful-stop.py:ro
     shm_size: "1gb"
     restart: unless-stopped
+    stop_grace_period: 30s
+    # Chrome treats SIGINT as a graceful exit. The desktop's default SIGTERM
+    # shutdown can leave a crashed-session marker and skip automatic restore.
+    pre_stop:
+      - command: ["python3", "/opt/home-browser/graceful-stop.py"]
+        user: root
     environment:
       TZ: America/Chicago
-      CHROME_CLI: https://www.google.com
+      SUBFOLDER: /browser/session/
+      # Reopen saved tabs after a host/container restart; do not add a new
+      # Google tab on every launch. The profile remains in chrome-profile.
+      CHROME_CLI: --restore-last-session
       HARDEN_DESKTOP: "true"
       HARDEN_OPENBOX: "true"
       SELKIES_MODE: websockets
@@ -26,7 +36,10 @@ services:
       SELKIES_UI_SIDEBAR_SHOW_FILES: "true|locked"
       SELKIES_UI_TITLE: Home Browser
       SELKIES_ENCODER: h264enc,jpeg
-      SELKIES_FRAMERATE: "30,8-60"
+      # Avoid Retina/HiDPI oversampling: stream near CSS-pixel resolution.
+      # Leave scaling_dpi automatic so CSS scaling follows the client's display.
+      SELKIES_USE_CSS_SCALING: "true|locked"
+      SELKIES_FRAMERATE: "30,8-30"
       SELKIES_CLIPBOARD_SEAMLESS: "false"
       PELORUS: "false"
 

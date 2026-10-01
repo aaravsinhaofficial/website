@@ -6,3 +6,4 @@ home-browser/
 *.out
 usaco
 node_modules/
+test/

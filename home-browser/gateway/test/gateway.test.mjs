@@ -58,7 +58,7 @@ async function fixture(t, options = {}) {
     });
   }
   async function login(value = password, headers = {}) {
-    return request('/auth/login', {
+    return request((options.env?.HOME_BROWSER_BASE_PATH || '') + '/auth/login', {
       method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json', ...headers },
       body: JSON.stringify({ password: value }),
     });
@@ -66,13 +66,13 @@ async function fixture(t, options = {}) {
   return { gateway, upstream, received, origin, request, login, wss };
 }
 
-function websocket(origin, headers) {
-  return new WebSocket(origin.replace('http:', 'ws:') + '/api/stream', { headers });
+function websocket(origin, headers, pathname = '/api/stream') {
+  return new WebSocket(origin.replace('http:', 'ws:') + pathname, { headers });
 }
 
-async function websocketDenied(origin, headers) {
+async function websocketDenied(origin, headers, pathname = '/api/stream') {
   return new Promise((resolve, reject) => {
-    const ws = websocket(origin, headers);
+    const ws = websocket(origin, headers, pathname);
     ws.on('unexpected-response', (req, res) => { const code = res.statusCode; res.resume(); ws.terminate(); resolve(code); });
     ws.on('open', () => { ws.terminate(); reject(new Error('WebSocket unexpectedly authenticated')); });
     ws.on('error', () => {});
@@ -264,4 +264,102 @@ test('public tunnel URL reloads from the external config without restarting', as
   await writeFile(configPath, JSON.stringify({ publicUrl: 'https://new-tunnel.trycloudflare.com' }));
   assert.equal((await request('/auth/login', { headers: { Host: 'old-tunnel.trycloudflare.com' } })).status, 421);
   assert.equal((await request('/auth/login', { headers: { Host: 'new-tunnel.trycloudflare.com' } })).status, 200);
+});
+
+test('base path contains every auth route, redirect, and login script URL', async t => {
+  const base = '/browser/session';
+  const { request, login, origin, received } = await fixture(t, { env: { HOME_BROWSER_BASE_PATH: base } });
+  for (const url of ['/', '/auth/login', '/auth/health', '/api/stream', '/browser/session-extra/auth/login']) {
+    assert.equal((await request(url, { headers: { Accept: 'text/html' } })).status, 404);
+  }
+  assert.equal(received.length, 0);
+  const navigation = await request(base + '/', { headers: { Accept: 'text/html' } });
+  assert.equal(navigation.status, 303);
+  assert.equal(navigation.headers.get('location'), base + '/auth/login');
+  const page = await request(base + '/auth/login');
+  assert.equal(page.status, 200);
+  const html = await page.text();
+  assert.match(html, /const basePath = "\/browser\/session";/);
+  assert.ok(!html.includes('{{BASE_PATH_JSON}}'));
+  assert.ok(!html.includes('{{NONCE}}'));
+  assert.ok(!html.includes("fetch('/auth/"));
+  assert.ok(html.includes("location.replace(basePath + '/')"));
+  assert.match(page.headers.get('content-security-policy'), /script-src 'nonce-/);
+  const health = await request(base + '/auth/health');
+  assert.equal(health.status, 200);
+  assert.equal(received.at(-1).url, base + '/');
+  assert.equal((await login('incorrect')).status, 401);
+  const good = await login();
+  assert.equal(good.status, 200);
+  assert.match(good.headers.get('set-cookie'), /; Path=\//);
+  const cookie = good.headers.get('set-cookie').split(';')[0];
+  const headers = { Cookie: cookie };
+  assert.equal((await request(base + '/auth/session', { headers })).status, 200);
+  const signedInPage = await request(base + '/auth/login', { headers });
+  assert.equal(signedInPage.headers.get('location'), base + '/');
+  assert.equal((await request(base + '/assets/app.js?quality=high', { headers })).status, 200);
+  assert.equal(received.at(-1).url, base + '/assets/app.js?quality=high');
+  assert.equal((await request('/', { headers })).status, 404);
+  assert.equal((await request('/auth/session', { headers })).status, 404);
+  assert.equal((await request(base + '/json/version', { headers })).status, 404);
+  const logout = await request(base + '/auth/logout', { method: 'POST', headers: { ...headers, Origin: origin } });
+  assert.equal(logout.status, 200);
+  assert.equal((await request(base + '/', { headers })).status, 401);
+});
+
+test('base path websocket requires authentication and retains its complete upstream path', async t => {
+  const base = '/browser/session';
+  const { origin, login, request, wss } = await fixture(t, { env: { HOME_BROWSER_BASE_PATH: base } });
+  assert.equal(await websocketDenied(origin, { Origin: origin }, base + '/api/stream'), 401);
+  const cookie = (await login()).headers.get('set-cookie').split(';')[0];
+  assert.equal(await websocketDenied(origin, { Cookie: cookie, Origin: origin }), 403);
+  assert.equal(await websocketDenied(origin, { Cookie: cookie, Origin: origin }, base + '-extra/api/stream'), 403);
+  assert.equal(await websocketDenied(origin, { Cookie: cookie, Origin: 'https://aaravsinha.dev' }, base + '/api/stream'), 403);
+  const connected = once(wss, 'connection');
+  const ws = websocket(origin, { Cookie: cookie, Origin: origin }, base + '/api/stream?resolution=720');
+  await once(ws, 'open');
+  assert.equal((await connected)[1].url, base + '/api/stream?resolution=720');
+  const echo = once(ws, 'message');
+  ws.send('prefixed-stream');
+  assert.equal((await echo)[0].toString(), 'prefixed-stream');
+  const closed = once(ws, 'close');
+  await request(base + '/auth/logout', { method: 'POST', headers: { Cookie: cookie, Origin: origin } });
+  await closed;
+});
+
+test('base path configuration rejects markup, encoded separators, and ambiguous paths', async t => {
+  for (const base of ['/', 'browser/session', '/browser/session/', '//browser/session', '/browser/../session',
+    '/browser%2fsession', '/browser?session', '/browser#session', '/browser\\session', '/<script>', '/"quoted"', '/x'.repeat(65)]) {
+    assert.throws(() => createGateway({
+      env: { HOME_BROWSER_BASE_PATH: base }, passwordHash, sessionSecret,
+    }), /HOME_BROWSER_BASE_PATH/);
+  }
+  const { origin, request } = await fixture(t, { env: { HOME_BROWSER_BASE_PATH: '/browser/session' } });
+  // Raw requests preserve dot segments, unlike URL-based client helpers.
+  async function rawRequest(pathname) {
+    return new Promise((resolve, reject) => {
+      const req = http.request({ hostname: '127.0.0.1', port: new URL(origin).port, path: pathname }, res => {
+        res.resume();
+        res.on('end', () => resolve(res.statusCode));
+      });
+      req.on('error', reject);
+      req.end();
+    });
+  }
+  assert.equal(await rawRequest('/browser/session/../../auth/health'), 404);
+  assert.equal(await rawRequest('/outside/../browser/session/auth/health'), 404);
+  assert.equal(await rawRequest('/browser/session/%2e%2e/auth/health'), 404);
+  assert.equal((await request('/browser/session%2fauth/health')).status, 404);
+});
+
+test('health does not report ready when the upstream browser subfolder is missing', async t => {
+  const { upstream, request } = await fixture(t, { env: { HOME_BROWSER_BASE_PATH: '/browser/session' } });
+  upstream.removeAllListeners('request');
+  upstream.on('request', (req, res) => {
+    res.writeHead(req.url === '/' ? 200 : 404);
+    res.end();
+  });
+  const health = await request('/browser/session/auth/health');
+  assert.equal(health.status, 503);
+  assert.deepEqual(await health.json(), { status: 'starting' });
 });
