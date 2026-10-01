@@ -2,6 +2,18 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
+      "source": "/desktop/session/",
+      "destination": "/api/desktop-relay?__desktop_relay_path="
+    },
+    {
+      "source": "/desktop/session/:path*",
+      "destination": "/api/desktop-relay?__desktop_relay_path=:path*"
+    },
+    {
+      "source": "/desktop",
+      "destination": "/desktop/index.html"
+    },
+    {
       "source": "/browser/session/",
       "destination": "/api/browser-relay?__browser_relay_path="
     },
@@ -100,11 +112,63 @@
           "value": "noindex, nofollow, noarchive"
         }
       ]
+    },
+    {
+      "source": "/desktop/:path*",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "no-referrer"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        }
+      ]
+    },
+    {
+      "source": "/desktop/",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'none'; form-action 'self'"
+        }
+      ]
+    },
+    {
+      "source": "/desktop/index.html",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'none'; form-action 'self'"
+        }
+      ]
+    },
+    {
+      "source": "/desktop",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'none'; form-action 'self'"
+        }
+      ]
     }
   ],
   "fluid": true,
   "functions": {
     "api/browser-relay.mjs": {
+      "maxDuration": 300,
+      "includeFiles": "browser/connection.json"
+    },
+    "api/desktop-relay.mjs": {
       "maxDuration": 300,
       "includeFiles": "browser/connection.json"
     }

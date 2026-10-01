@@ -14,8 +14,10 @@ function jsonResponse(value, init = {}) {
   return new Response(JSON.stringify(value), { headers: { 'content-type': 'application/json' }, ...init });
 }
 
-async function fixture(t, { handle, targetResolver, upgradeTimeoutMs } = {}) {
+async function fixture(t, { handle, targetResolver, upgradeTimeoutMs, relayOptions = {} } = {}) {
   const received = [];
+  const base = relayOptions.basePath || BASE;
+  const cookie = `${relayOptions.sessionCookie || '__Host-home_browser'}=test-session.signature`;
   let invalidations = 0;
   const upstream = http.createServer(async (req, res) => {
     const chunks = [];
@@ -23,20 +25,20 @@ async function fixture(t, { handle, targetResolver, upgradeTimeoutMs } = {}) {
     const entry = { url: req.url, method: req.method, headers: { ...req.headers }, body: Buffer.concat(chunks).toString() };
     received.push(entry);
     if (handle) return handle(req, res, entry);
-    if (req.url === `${BASE}/auth/login` && req.method === 'POST') {
+    if (req.url === `${base}/auth/login` && req.method === 'POST') {
       const authorized = entry.body === JSON.stringify({ password: 'test-password' });
-      res.writeHead(authorized ? 200 : 401, authorized ? { 'Set-Cookie': `${COOKIE}; Domain=home.trycloudflare.com; Path=/; Secure; HttpOnly; SameSite=None; Partitioned` } : {});
+      res.writeHead(authorized ? 200 : 401, authorized ? { 'Set-Cookie': `${cookie}; Domain=home.trycloudflare.com; Path=/; Secure; HttpOnly; SameSite=None; Partitioned` } : {});
       res.end(JSON.stringify({ authenticated: authorized }));
-    } else if (req.url === `${BASE}/auth/session`) {
-      res.writeHead(req.headers.cookie === COOKIE ? 200 : 401);
+    } else if (req.url === `${base}/auth/session`) {
+      res.writeHead(req.headers.cookie === cookie ? 200 : 401);
       res.end('session');
-    } else if (req.url === `${BASE}/redirect`) {
-      res.writeHead(303, { Location: `${target}${BASE}/auth/login` });
+    } else if (req.url === `${base}/redirect`) {
+      res.writeHead(303, { Location: `${target}${base}/auth/login` });
       res.end();
-    } else if (req.url === `${BASE}/root-redirect`) {
+    } else if (req.url === `${base}/root-redirect`) {
       res.writeHead(302, { Location: '/auth/login' });
       res.end();
-    } else if (req.url === `${BASE}/external-redirect`) {
+    } else if (req.url === `${base}/external-redirect`) {
       res.writeHead(302, { Location: 'https://example.com/' });
       res.end();
     } else {
@@ -50,7 +52,7 @@ async function fixture(t, { handle, targetResolver, upgradeTimeoutMs } = {}) {
   upstream.on('upgrade', (req, socket, head) => {
     received.push({ url: req.url, headers: { ...req.headers }, websocket: true });
     if (req.url.endsWith('/hang')) return;
-    if (req.headers.cookie !== COOKIE) return socket.end('HTTP/1.1 401 Unauthorized\r\nContent-Length: 0\r\nConnection: close\r\n\r\n');
+    if (req.headers.cookie !== cookie) return socket.end('HTTP/1.1 401 Unauthorized\r\nContent-Length: 0\r\nConnection: close\r\n\r\n');
     wss.handleUpgrade(req, socket, head, ws => {
       ws.on('message', (data, binary) => ws.send(data, { binary }));
     });
@@ -60,7 +62,7 @@ async function fixture(t, { handle, targetResolver, upgradeTimeoutMs } = {}) {
   const target = `http://127.0.0.1:${upstream.address().port}`;
   const resolver = targetResolver || (async () => target);
   resolver.invalidate = () => { invalidations += 1; };
-  const relay = createBrowserRelay({ resolveTarget: resolver, allowLoopbackForTests: true, upgradeTimeoutMs });
+  const relay = createBrowserRelay({ resolveTarget: resolver, allowLoopbackForTests: true, upgradeTimeoutMs, ...relayOptions });
   relay.server.listen(0, '127.0.0.1');
   await once(relay.server, 'listening');
   const port = relay.server.address().port;
@@ -82,8 +84,8 @@ async function fixture(t, { handle, targetResolver, upgradeTimeoutMs } = {}) {
       req.end(body);
     });
   }
-  function websocket(path = `${BASE}/api/websockets`, headers = {}) {
-    return new WebSocket(`ws://127.0.0.1:${port}${path}`, { headers: { Host: 'aaravsinha.dev', Origin: ORIGIN, Cookie: COOKIE, ...headers } });
+  function websocket(path = `${base}/api/websockets`, headers = {}) {
+    return new WebSocket(`ws://127.0.0.1:${port}${path}`, { headers: { Host: 'aaravsinha.dev', Origin: ORIGIN, Cookie: cookie, ...headers } });
   }
   return { relay, request, websocket, received, upstream, target, invalidations: () => invalidations };
 }
@@ -351,4 +353,133 @@ test('WebSocket handshake timeout closes the stalled upstream and invalidates di
   const f = await fixture(t, { upgradeTimeoutMs: 30 });
   assert.equal(await rejectedWebsocket(f.websocket(`${BASE}/hang`)), 502);
   assert.equal(f.invalidations(), 1);
+});
+
+const DESKTOP_BASE = '/desktop/session';
+const DESKTOP_COOKIE = '__Host-home_desktop=test-session.signature';
+const DESKTOP_OPTIONS = {
+  basePath: DESKTOP_BASE,
+  sessionCookie: '__Host-home_desktop',
+  relayEndpoint: '/api/desktop-relay',
+  relayPathQuery: '__desktop_relay_path',
+};
+
+test('relay service configuration rejects unsafe paths, cookie names, and rewrite parameters', () => {
+  const resolveTarget = async () => 'https://home.trycloudflare.com';
+  for (const basePath of ['', '/', '/desktop/session/', '/desktop/../session', '/desktop%2fsession', '/desktop?session', '/desktop\\session']) {
+    assert.throws(() => createBrowserRelay({ resolveTarget, basePath }), /Invalid relay base path/);
+  }
+  for (const sessionCookie of ['home_desktop', '__Host-home.desktop', '__Host-home_desktop;evil', '__Host-.*', '__Host-']) {
+    assert.throws(() => createBrowserRelay({ resolveTarget, sessionCookie }), /Invalid relay session cookie/);
+  }
+  for (const relayEndpoint of ['/api/desktop-relay/extra', 'https://evil.example', '/api/../session']) {
+    assert.throws(() => createBrowserRelay({ resolveTarget, relayEndpoint }), /Invalid relay rewrite/);
+  }
+  for (const relayPathQuery of ['', 'query=value', '__desktop&other', '__desktop?query']) {
+    assert.throws(() => createBrowserRelay({ resolveTarget, relayPathQuery }), /Invalid relay rewrite/);
+  }
+});
+
+test('desktop and browser authentication cookies stay isolated in both directions', async t => {
+  const desktop = await fixture(t, { relayOptions: DESKTOP_OPTIONS });
+  const browser = await fixture(t);
+  const login = await desktop.request(`${DESKTOP_BASE}/auth/login`, {
+    method: 'POST', headers: { Origin: ORIGIN, 'Content-Type': 'application/json', Cookie: COOKIE },
+    body: JSON.stringify({ password: 'test-password' }),
+  });
+  assert.equal(login.status, 200);
+  assert.deepEqual(login.headers['set-cookie'], [`${DESKTOP_COOKIE}; Path=/; Secure; HttpOnly; SameSite=Lax`]);
+  assert.equal(desktop.received.at(-1).headers.cookie, undefined);
+  assert.equal((await desktop.request(`${DESKTOP_BASE}/auth/session`, { headers: { Cookie: COOKIE } })).status, 401);
+  assert.equal((await browser.request(`${BASE}/auth/session`, { headers: { Cookie: DESKTOP_COOKIE } })).status, 401);
+  const combined = `${COOKIE}; ${DESKTOP_COOKIE}; unrelated=private`;
+  assert.equal((await desktop.request(`${DESKTOP_BASE}/auth/session`, { headers: { Cookie: combined } })).status, 200);
+  assert.equal(desktop.received.at(-1).headers.cookie, DESKTOP_COOKIE);
+  assert.equal((await browser.request(`${BASE}/auth/session`, { headers: { Cookie: combined } })).status, 200);
+  assert.equal(browser.received.at(-1).headers.cookie, COOKIE);
+  assert.equal((await desktop.request(`${DESKTOP_BASE}/auth/session`, {
+    headers: { Cookie: `${DESKTOP_COOKIE}; ${DESKTOP_COOKIE}` },
+  })).status, 401);
+});
+
+test('desktop rewrite marker preserves application queries and rejects other service routes', async t => {
+  const desktop = await fixture(t, { relayOptions: DESKTOP_OPTIONS });
+  assert.equal((await desktop.request('/api/desktop-relay?__desktop_relay_path=api%2Ffiles&path=Documents%2Fnotes')).status, 200);
+  assert.equal(desktop.received.at(-1).url, `${DESKTOP_BASE}/api/files?path=Documents%2Fnotes`);
+  assert.equal((await desktop.request('/api/desktop-relay?__desktop_relay_path=')).status, 200);
+  assert.equal(desktop.received.at(-1).url, `${DESKTOP_BASE}/`);
+  const before = desktop.received.length;
+  for (const pathname of [
+    '/', `${BASE}/auth/health`, '/api/browser-relay?__browser_relay_path=auth%2Fhealth',
+    '/api/desktop-relay?__browser_relay_path=auth%2Fhealth',
+    '/api/browser-relay?__desktop_relay_path=auth%2Fhealth',
+    '/api/desktop-relay?__desktop_relay_path=a&__desktop_relay_path=b',
+    `${DESKTOP_BASE}-other/auth/health`, `${DESKTOP_BASE}/%2e%2e/auth/health`,
+    '/api/desktop-relay?__desktop_relay_path=%252e%252e%252fprivate',
+  ]) assert.equal((await desktop.request(pathname)).status, 403, pathname);
+  assert.equal(desktop.received.length, before);
+});
+
+test('desktop response cookies and redirects cannot affect the browser session', async t => {
+  const desktop = await fixture(t, { relayOptions: DESKTOP_OPTIONS });
+  for (const pathname of ['redirect', 'root-redirect']) {
+    const response = await desktop.request(`${DESKTOP_BASE}/${pathname}`);
+    assert.equal(response.headers.location, `${DESKTOP_BASE}/auth/login`);
+  }
+  assert.equal((await desktop.request(`${DESKTOP_BASE}/external-redirect`)).status, 502);
+  const setter = await fixture(t, { relayOptions: DESKTOP_OPTIONS, handle: (_req, res) => {
+    res.writeHead(200, { 'Set-Cookie': [
+      `${COOKIE}; Path=/; Max-Age=0`,
+      '__Host-home_desktop=; Domain=.aaravsinha.dev; Path=/other; Max-Age=0',
+      'unrelated=attack; Path=/',
+    ] });
+    res.end('logout');
+  } });
+  const response = await setter.request(`${DESKTOP_BASE}/auth/logout`);
+  assert.deepEqual(response.headers['set-cookie'], ['__Host-home_desktop=; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=0']);
+  assert.equal(response.headers['cache-control'], 'no-store');
+});
+
+test('desktop WebSocket frames preserve prefix and use only the desktop cookie', async t => {
+  const desktop = await fixture(t, { relayOptions: DESKTOP_OPTIONS });
+  assert.equal(await rejectedWebsocket(desktop.websocket(undefined, { Origin: 'https://evil.example' })), 403);
+  assert.equal(await rejectedWebsocket(desktop.websocket(undefined, { Cookie: COOKIE })), 401);
+  assert.equal(await rejectedWebsocket(desktop.websocket(`${BASE}/api/websockets`)), 403);
+  const ws = desktop.websocket('/api/desktop-relay?__desktop_relay_path=api%2Fwebsockets', { Cookie: `${COOKIE}; ${DESKTOP_COOKIE}` });
+  await once(ws, 'open');
+  assert.equal(desktop.received.at(-1).url, `${DESKTOP_BASE}/api/websockets`);
+  assert.equal(desktop.received.at(-1).headers.cookie, DESKTOP_COOKIE);
+  assert.equal(desktop.received.at(-1).headers.origin, desktop.target);
+  const output = once(ws, 'message');
+  const pixels = Buffer.alloc(32 * 1024, 0x3a);
+  ws.send(pixels);
+  assert.deepEqual((await output)[0], pixels);
+  const closed = once(ws, 'close');
+  ws.close();
+  await closed;
+});
+
+test('desktop private asset caching requires its own successful authenticated static response', async t => {
+  const desktop = await fixture(t, { relayOptions: DESKTOP_OPTIONS, handle: (req, res) => {
+    const authorized = req.headers.cookie === DESKTOP_COOKIE;
+    const headers = { 'Content-Type': req.url.endsWith('.css') ? 'text/css' : 'application/javascript' };
+    if (req.url.includes('html-')) headers['Content-Type'] = 'text/html';
+    if (req.url.includes('download-')) headers['Content-Disposition'] = 'attachment';
+    res.writeHead(authorized ? 200 : 401, headers);
+    res.end('desktop static code');
+  } });
+  for (const extension of ['js', 'css']) {
+    const pathname = `${DESKTOP_BASE}/assets/index-AbCd1234.${extension}`;
+    const good = await desktop.request(pathname, { headers: { Cookie: `${COOKIE}; ${DESKTOP_COOKIE}` } });
+    assert.equal(good.headers['cache-control'], 'private, max-age=86400, immutable');
+    assert.equal(good.headers['cdn-cache-control'], 'no-store');
+    assert.equal(good.headers['vercel-cdn-cache-control'], 'no-store');
+    const otherSession = await desktop.request(pathname, { headers: { Cookie: COOKIE } });
+    assert.equal(otherSession.status, 401);
+    assert.equal(otherSession.headers['cache-control'], 'no-store');
+  }
+  for (const pathname of [
+    `${DESKTOP_BASE}/auth/login`, `${DESKTOP_BASE}/api/files`, `${DESKTOP_BASE}/assets/unversioned.js`,
+    `${DESKTOP_BASE}/assets/html-AbCd1234.js`, `${DESKTOP_BASE}/assets/download-AbCd1234.js`,
+  ]) assert.equal((await desktop.request(pathname, { headers: { Cookie: DESKTOP_COOKIE } })).headers['cache-control'], 'no-store');
 });

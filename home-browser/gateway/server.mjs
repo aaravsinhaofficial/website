@@ -405,7 +405,8 @@ export function createGateway(options = {}) {
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
-    const gateway = createGateway();
+    const { createHomeGateway } = await import('../entry.mjs');
+    const gateway = createHomeGateway(createGateway);
     gateway.server.listen(gateway.port, '127.0.0.1', () => {
       console.log(`Home browser gateway listening on 127.0.0.1:${gateway.port}`);
     });

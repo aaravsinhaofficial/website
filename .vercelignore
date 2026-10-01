@@ -7,3 +7,6 @@ home-browser/
 usaco
 node_modules/
 test/
+home-desktop/
+desktop/src/
+scripts/
