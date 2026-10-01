@@ -10,12 +10,26 @@ import { randomBytes } from 'node:crypto';
 import { WebSocket } from 'ws';
 import { createDesktopGateway, DESKTOP_BASE_PATH as BASE } from '../server.mjs';
 import { createDesktopAuth, hashPassword, readDesktopConfig, writeDesktopConfig } from '../auth.mjs';
+import { createDisplayReader, normalizeDisplays } from '../displays.mjs';
 
 const PASSWORD = 'desktop-test-password';
 const HASH = await hashPassword(PASSWORD);
 const ORIGIN = 'https://desktop-fixture.trycloudflare.com';
 const COOKIE = '__Host-home_desktop';
 const TIME = 1_790_851_500_000;
+const RAW_DISPLAYS = [
+  { id: '2', isMain: false, isBuiltin: false, x: 779, y: -1080, width: 1920, height: 1080 },
+  { id: '1', isMain: true, isBuiltin: true, x: 0, y: 0, width: 1512, height: 982 },
+  { id: '3', isMain: false, isBuiltin: false, x: -1141, y: -1080, width: 1920, height: 1080 },
+];
+const DISPLAYS = {
+  width: 3840, height: 2062,
+  displays: [
+    { id: '3', name: 'Display 1', isMain: false, x: 0, y: 0, width: 1920, height: 1080 },
+    { id: '1', name: 'Built-in display', isMain: true, x: 1141, y: 1080, width: 1512, height: 982 },
+    { id: '2', name: 'Display 2', isMain: false, x: 1920, y: 0, width: 1920, height: 1080 },
+  ],
+};
 
 async function fixture(t, options = {}) {
   const directory = await mkdtemp(join(tmpdir(), 'desktop-gateway-test-'));
@@ -271,4 +285,100 @@ test('parallel WebSocket handshakes cannot exceed the per-session connection lim
   })));
   assert.equal(results.filter(status => status === 101).length, 2);
   assert.equal(results.filter(status => status === 429).length, 2);
+});
+
+test('display geometry is normalized from logical bounds without private metadata', () => {
+  const raw = RAW_DISPLAYS.map(display => ({ ...display, serial: 'private-serial', name: 'private-model', windows: ['private-window'] }));
+  assert.deepEqual(normalizeDisplays(raw), DISPLAYS);
+  assert.deepEqual(normalizeDisplays([...RAW_DISPLAYS].reverse()), DISPLAYS);
+  const one = { id: '1', isMain: true, isBuiltin: true, x: 0, y: 0, width: 1512, height: 982 };
+  const invalid = [
+    null, [], Array.from({ length: 17 }, (_, index) => ({ ...one, id: String(index + 1) })),
+    [one, one], [{ ...one, id: '01' }], [{ ...one, id: '4294967296' }],
+    [{ ...one, isMain: false }], [{ ...one, isBuiltin: 'yes' }],
+    [{ ...one, x: 0.5 }], [{ ...one, y: NaN }], [{ ...one, width: 0 }],
+    [{ ...one, height: 65536 }], [{ ...one, x: Number.MAX_SAFE_INTEGER }],
+    [one, { ...one, id: '2', isMain: false, x: -65535 }],
+  ];
+  for (const value of invalid) assert.throws(() => normalizeDisplays(value), /unavailable/);
+});
+
+test('display reader coalesces concurrent queries and refreshes after five seconds', async () => {
+  let time = TIME;
+  let calls = 0;
+  let release;
+  const first = new Promise(resolve => { release = resolve; });
+  const read = createDisplayReader({ now: () => time, readRaw: async () => {
+    calls += 1;
+    if (calls === 1) await first;
+    return RAW_DISPLAYS;
+  } });
+  const requests = [read(), read(), read()];
+  await Promise.resolve();
+  assert.equal(calls, 1);
+  release();
+  for (const result of await Promise.all(requests)) assert.deepEqual(result, DISPLAYS);
+  time += 4999;
+  assert.deepEqual(await read(), DISPLAYS);
+  assert.equal(calls, 1);
+  time += 1;
+  assert.deepEqual(await read(), DISPLAYS);
+  assert.equal(calls, 2);
+});
+
+test('display endpoint authenticates before querying and protects cached metadata', async t => {
+  let calls = 0;
+  const f = await fixture(t, { readDisplaysForTests: async () => { calls += 1; return RAW_DISPLAYS; } });
+  assert.equal((await f.request('/displays')).status, 401);
+  assert.equal((await f.request('/displays', { headers: { Cookie: 'invalid' } })).status, 401);
+  assert.equal(calls, 0);
+  const login = await f.login();
+  const headers = { Cookie: login.cookie };
+  const result = await f.request('/displays?target=ignored.example&path=/private', { headers });
+  assert.equal(result.status, 200);
+  assert.equal(result.headers['cache-control'], 'no-store');
+  assert.deepEqual(result.data, DISPLAYS);
+  assert.equal((await f.request('/displays', { headers })).status, 200);
+  assert.equal(calls, 1);
+  assert.equal((await f.request('/displays', { headers: { ...headers, Origin: 'https://evil.example' } })).status, 403);
+  assert.equal((await f.request('/displays/../auth/status', { headers })).status, 404);
+  assert.equal((await f.request('/displays', { method: 'POST', headers })).status, 405);
+  assert.equal(calls, 1);
+  await f.request('/auth/logout', { method: 'POST', headers });
+  assert.equal((await f.request('/displays', { headers })).status, 401);
+  assert.equal(calls, 1);
+});
+
+test('display query and validation failures return only a generic unavailable response', async t => {
+  let mode = 'error';
+  const f = await fixture(t, { readDisplaysForTests: async () => {
+    if (mode === 'error') throw new Error('private helper diagnostics');
+    if (mode === 'invalid') return [{ ...RAW_DISPLAYS[1], width: Infinity }];
+    return RAW_DISPLAYS;
+  } });
+  const login = await f.login();
+  const headers = { Cookie: login.cookie };
+  for (mode of ['error', 'invalid']) {
+    const response = await f.request('/displays', { headers });
+    assert.equal(response.status, 503);
+    assert.deepEqual(response.data, { error: { code: 'unavailable', message: 'Desktop gateway is unavailable.' } });
+    assert.equal(response.headers['cache-control'], 'no-store');
+  }
+  mode = 'valid';
+  assert.deepEqual((await f.request('/displays', { headers })).data, DISPLAYS);
+});
+
+test('logout during a pending display query prevents its result from being returned', async t => {
+  let release;
+  let started;
+  const pending = new Promise(resolve => { release = resolve; });
+  const began = new Promise(resolve => { started = resolve; });
+  const f = await fixture(t, { readDisplaysForTests: async () => { started(); await pending; return RAW_DISPLAYS; } });
+  const login = await f.login();
+  const headers = { Cookie: login.cookie };
+  const response = f.request('/displays', { headers });
+  await began;
+  assert.equal((await f.request('/auth/logout', { method: 'POST', headers })).status, 200);
+  release();
+  assert.equal((await response).status, 401);
 });

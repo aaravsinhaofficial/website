@@ -7,6 +7,7 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocket, WebSocketServer } from 'ws';
 import { createDesktopAuth } from './auth.mjs';
+import { createDisplayReader } from './displays.mjs';
 
 export const DESKTOP_BASE_PATH = '/desktop/session';
 const COOKIE = '__Host-home_desktop';
@@ -87,6 +88,7 @@ export function createDesktopGateway(options = {}) {
   const browserConfigPath = options.browserConfigPath ?? join(homedir(), 'Library', 'Application Support', 'aarav-home-browser', 'config.json');
   const now = options.now ?? Date.now;
   const auth = createDesktopAuth({ configPath });
+  const readDisplays = createDisplayReader({ readRaw: options.readDisplaysForTests, now });
   const sessionTtlMs = Math.max(1, Math.min(options.sessionTtlMs ?? MAX_SESSION_MS, MAX_SESSION_MS));
   const bodyTimeoutMs = Math.max(1, Math.min(options.loginBodyTimeoutMs ?? 10_000, 10_000));
   const connectTimeoutMs = Math.max(1, Math.min(options.connectTimeoutMs ?? 2000, 2000));
@@ -143,7 +145,7 @@ export function createDesktopGateway(options = {}) {
     if (!pathname.startsWith(`${DESKTOP_BASE_PATH}/`) ||
         /[%\\#\u0000-\u0020\u007f]/.test(pathname)) return null;
     const suffix = pathname.slice(DESKTOP_BASE_PATH.length);
-    return ['/auth/status', '/auth/login', '/auth/logout', '/health', '/websockify'].includes(suffix) ? suffix : null;
+    return ['/auth/status', '/auth/login', '/auth/logout', '/health', '/websockify', '/displays'].includes(suffix) ? suffix : null;
   }
 
   function cookie(token, maxAge) {
@@ -284,6 +286,15 @@ export function createDesktopGateway(options = {}) {
       if (path === '/health' && req.method === 'GET') {
         const available = await desktopAvailable();
         return reply(res, available ? 200 : 503, { status: available ? 'ready' : 'unavailable', desktopAvailable: available });
+      }
+      if (path === '/displays' && req.method === 'GET') {
+        const authenticated = getSession(req);
+        if (!authenticated) return failure(res, 401, 'authentication_required', 'Authentication required.');
+        const displays = await readDisplays();
+        // A logout, expiry, or credential rotation during the native query also
+        // revokes access to its result, including an otherwise valid cache hit.
+        if (getSession(req)?.id !== authenticated.id) return failure(res, 401, 'authentication_required', 'Authentication required.');
+        return reply(res, 200, displays);
       }
       if (path === '/auth/login' && req.method === 'POST') {
         const retryAfter = checkRate(req);

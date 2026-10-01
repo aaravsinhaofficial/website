@@ -17,6 +17,12 @@ The Mac's built-in Screen Sharing performs its own ARD authentication. Enter the
 
 Native Screen Sharing must be enabled in System Settings → General → Sharing, with access restricted to the intended Mac account. Do not configure router port forwarding for VNC. The gateway always uses loopback; VNC remains protected by macOS account authentication.
 
+## Display selection
+
+Use the left and right arrows in the toolbar to show one physical display at a time. Displays are ordered from left to right; the main display is selected initially. The selected display is remembered in this browser when reconnecting or reopening the page. Fit screen scales the selected display, and turning it off shows that display at native size.
+
+Display positions come from an authenticated, cached CoreGraphics query on the Mac. The viewer crops the existing VNC framebuffer and uses noVNC's coordinate translation for mouse input. It does not change Mac display settings or reduce the full framebuffer's network traffic. If the reported layout cannot safely match the incoming framebuffer, the viewer temporarily shows the full desktop and retries the display layout.
+
 ## Persistence and limitations
 
 The existing Home Browser launch agent starts the shared gateway and tunnel at Mac login and prevents idle system sleep. Leave the Mac powered on, plugged in, logged in, awake, and connected. Closing the lid, deliberately sleeping, shutting down, losing power, or disconnecting the network interrupts access. After a reboot, FileVault may require a local unlock before the user launch agent can start.

@@ -1,9 +1,47 @@
-import RFB from '@novnc/novnc';
+import RFB from './display-rfb.js';
 
 const $ = id => document.getElementById(id);
 const base = '/desktop/session';
 let rfb, reconnectTimer, active = true, connected = false, credentials = null, commandHeld = false, generation = 0;
 let retryDelay = 1500;
+let displayLayout = null;
+let preferredDisplay = null;
+try { preferredDisplay = localStorage.getItem('home-desktop.display'); } catch {}
+function displayControls() {
+  const state = rfb?.displayState;
+  const ready = connected && state?.ready;
+  $('previous-display').disabled = $('next-display').disabled = !ready || state.displays.length < 2;
+  const selected = ready ? state.displays[state.index] : null;
+  $('display-label').textContent = selected ? `Screen ${state.index + 1} of ${state.displays.length}` : 'Displays';
+  $('display-switch').title = selected?.name || (connected ? 'Checking display layout…' : 'Connect to switch displays');
+  if (selected) {
+    preferredDisplay = selected.id;
+    try { localStorage.setItem('home-desktop.display', selected.id); } catch {}
+  }
+}
+function changeDisplay(direction) {
+  const state = rfb?.displayState;
+  if (!connected || !state?.ready || state.displays.length < 2) return;
+  releaseCommand();
+  const index = (state.index + direction + state.displays.length) % state.displays.length;
+  rfb.selectDisplay(state.displays[index].id);
+  displayControls();
+  rfb.focus();
+}
+async function refreshDisplays(client = rfb) {
+  if (!client) return;
+  try {
+    const layout = await api('/displays');
+    if (client !== rfb) return;
+    displayLayout = layout;
+    const savedDisplay = preferredDisplay;
+    client.setDisplayLayout(layout);
+    if (savedDisplay) client.selectDisplay(savedDisplay);
+    displayControls();
+  } catch {
+    // A temporary metadata failure keeps the currently selected screen.
+  }
+}
 const status = text => { $('status').textContent = text; };
 function panel(heading, message, form = null) {
   $('panel').hidden = false;
@@ -35,6 +73,7 @@ function disconnect() {
   connected = false;
   $('command').disabled = true;
   if (rfb) { const previous = rfb; rfb = null; previous.disconnect(); }
+  displayControls();
 }
 function retry() {
   if (!active) return;
@@ -61,6 +100,8 @@ async function check() {
       panel('Your Mac is online.', 'Turn on Screen Sharing in System Settings → General → Sharing, with access limited to your Mac account.');
       retry(); return;
     }
+    try { displayLayout = await api('/displays'); } catch { displayLayout = null; }
+    if (!active || run !== generation) return;
     connect();
   } catch {
     if (!active || run !== generation) return;
@@ -81,12 +122,17 @@ function connect() {
   client.qualityLevel = 5;
   client.compressionLevel = 2;
   client.background = '#090c12';
+  client.addEventListener('displaychange', () => { if (run === generation) displayControls(); });
+  if (displayLayout) client.setDisplayLayout(displayLayout);
+  if (preferredDisplay) client.selectDisplay(preferredDisplay);
   client.addEventListener('connect', () => {
     if (run !== generation) return;
     connected = true; retryDelay = 1500;
     $('panel').hidden = true;
     $('command').disabled = false;
     status('Connected to your Mac');
+    displayControls();
+    if (!displayLayout) refreshDisplays(client);
     client.focus();
   });
   client.addEventListener('credentialsrequired', event => {
@@ -105,6 +151,7 @@ function connect() {
   client.addEventListener('disconnect', () => {
     if (run !== generation) return;
     rfb = null; connected = false; commandHeld = false;
+    displayControls();
     $('command').disabled = true;
     $('command').setAttribute('aria-pressed', 'false');
     if (!active) return;
@@ -141,6 +188,8 @@ $('lock').addEventListener('click', async () => {
   catch { status('Disconnected'); panel('Viewer disconnected.', 'Could not confirm logout. Select Lock viewer again when the connection returns.'); $('lock').disabled = false; }
 });
 $('reconnect').addEventListener('click', () => { disconnect(); active = true; retryDelay = 1500; check(); });
+$('previous-display').addEventListener('click', () => changeDisplay(-1));
+$('next-display').addEventListener('click', () => changeDisplay(1));
 $('fit').addEventListener('click', () => { const fit = $('fit').getAttribute('aria-pressed') !== 'true'; $('fit').setAttribute('aria-pressed', String(fit)); if (rfb) rfb.scaleViewport = fit; });
 $('command').addEventListener('click', () => {
   if (!connected || !rfb) return;
@@ -152,5 +201,6 @@ $('fullscreen').addEventListener('click', async () => { try { if (document.fulls
 window.addEventListener('blur', releaseCommand);
 window.addEventListener('pagehide', () => { active = false; disconnect(); credentials = null; });
 window.addEventListener('pageshow', event => { if (event.persisted) { active = true; check(); } });
+setInterval(() => { if (connected) refreshDisplays(); }, 15000);
 window.addEventListener('online', () => { if (active && !rfb) { clearTimeout(reconnectTimer); check(); } });
 check();
