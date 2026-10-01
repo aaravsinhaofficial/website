@@ -157,6 +157,8 @@ test('websockets authenticate, reject foreign/missing origins, and logout discon
   const good = await login();
   const cookie = good.headers.get('set-cookie').split(';')[0];
   assert.equal(await websocketDenied(origin, { Cookie: cookie, Origin: 'https://attacker.example' }), 403);
+  assert.equal(await websocketDenied(origin, { Cookie: cookie, Origin: 'https://aaravsinha.dev' }), 403);
+  assert.equal(await websocketDenied(origin, { Cookie: cookie, Origin: 'https://www.aaravsinha.dev' }), 403);
   assert.equal(await websocketDenied(origin, { Cookie: cookie }), 403);
   const ws = websocket(origin, { Cookie: cookie, Origin: origin });
   await once(ws, 'open');
@@ -167,6 +169,46 @@ test('websockets authenticate, reject foreign/missing origins, and logout discon
   await request('/auth/logout', { method: 'POST', headers: { Cookie: cookie, Origin: origin } });
   await closed;
   assert.equal(ws.readyState, WebSocket.CLOSED);
+});
+
+test('browser mutations require the iframe origin even though parent-origin logout is allowed', async t => {
+  const { origin, login, request } = await fixture(t);
+  const cookie = (await login()).headers.get('set-cookie').split(';')[0];
+  assert.equal((await request('/api/action', {
+    method: 'POST', headers: { Cookie: cookie, Origin: 'https://aaravsinha.dev' }, body: 'action',
+  })).status, 403);
+  assert.equal((await request('/api/action', {
+    method: 'POST', headers: { Cookie: cookie, Origin: origin }, body: 'action',
+  })).status, 200);
+});
+
+test('incomplete login bodies hit their own deadline while uploads retain five minutes', async t => {
+  const { origin, gateway, login } = await fixture(t, { loginBodyTimeoutMs: 60 });
+  assert.equal(gateway.server.requestTimeout, 300_000);
+  const result = await new Promise((resolve, reject) => {
+    const req = http.request(origin + '/auth/login', {
+      method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json', 'Content-Length': '100' },
+    }, res => {
+      res.resume();
+      res.on('end', () => resolve({ status: res.statusCode, connection: res.headers.connection }));
+    });
+    req.on('error', reject);
+    req.write('{"password":"');
+    // Deliberately never complete the body. The gateway must release the hashing slot.
+  });
+  assert.equal(result.status, 408);
+  assert.equal(result.connection, 'close');
+  assert.equal((await login()).status, 200);
+});
+
+test('chunked login requests cannot evade the body size limit', async t => {
+  const { origin, request } = await fixture(t);
+  const response = await request('/auth/login', {
+    method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json', 'Transfer-Encoding': 'chunked' },
+    body: JSON.stringify({ password: 'x'.repeat(3000) }),
+  });
+  assert.equal(response.status, 413);
+  assert.equal(response.headers.get('connection'), 'close');
 });
 
 test('session expiry closes an active websocket and rejects stale HTTP cookies', async t => {

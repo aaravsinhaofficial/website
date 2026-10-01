@@ -151,20 +151,39 @@ async function status() {
   console.log(`Supervisor log: ${join(stateDir, 'supervisor.log')}`);
 }
 
+async function processIdentity(pid) {
+  if (!Number.isInteger(pid) || pid <= 0) return null;
+  const [started, running] = await Promise.all([
+    command('/bin/ps', ['-p', String(pid), '-o', 'lstart='], { allowFailure: true }),
+    command('/bin/ps', ['-p', String(pid), '-o', 'command='], { allowFailure: true }),
+  ]);
+  if (started.code !== 0 || running.code !== 0) return null;
+  return { pid, startedAt: started.output, command: running.output };
+}
+
 async function run() {
   await requireSetup();
+  const ownIdentity = await processIdentity(process.pid);
   let lock;
   try { lock = await open(lockPath, 'wx', 0o600); }
   catch (error) {
     if (error.code !== 'EEXIST') throw error;
-    const pid = Number(await readFile(lockPath, 'utf8'));
-    let alive = false;
-    if (Number.isInteger(pid) && pid > 0) { try { process.kill(pid, 0); alive = true; } catch {} }
-    if (alive) throw new Error('A Home Browser supervisor is already running.');
+    let saved;
+    try { saved = JSON.parse(await readFile(lockPath, 'utf8')); }
+    catch { saved = null; }
+    const pid = typeof saved === 'number' ? saved : saved?.pid;
+    const identity = await processIdentity(pid);
+    // PID existence alone is insufficient: after a crash or reboot another
+    // application can inherit the number. New locks also bind the start time.
+    const script = join(sourceDir, 'manage.mjs');
+    const matchesCommand = identity && [script, 'home-browser/manage.mjs', 'manage.mjs']
+      .some(candidate => identity.command.endsWith(` ${candidate} run`));
+    const matchesStart = typeof saved === 'number' || saved?.startedAt === identity?.startedAt;
+    if (matchesCommand && matchesStart) throw new Error('A Home Browser supervisor is already running.');
     await rm(lockPath, { force: true });
     lock = await open(lockPath, 'wx', 0o600);
   }
-  await lock.writeFile(String(process.pid));
+  await lock.writeFile(JSON.stringify({ pid: process.pid, startedAt: ownIdentity?.startedAt }));
   await lock.close();
   let stopping = false;
   let publicUrl = '';

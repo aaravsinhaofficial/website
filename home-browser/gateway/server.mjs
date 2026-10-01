@@ -73,7 +73,7 @@ function reply(res, code, body, headers = {}) {
   res.end(payload);
 }
 
-async function readPassword(req) {
+async function readPassword(req, deadlineMs) {
   const contentType = (req.headers['content-type'] || '').split(';')[0].toLowerCase();
   if (!['application/json', 'application/x-www-form-urlencoded'].includes(contentType)) {
     throw Object.assign(new Error('Unsupported content type.'), { status: 415 });
@@ -82,14 +82,37 @@ async function readPassword(req) {
     req.resume();
     throw Object.assign(new Error('Request too large.'), { status: 413 });
   }
-  const chunks = [];
-  let length = 0;
-  for await (const chunk of req) {
-    length += chunk.length;
-    if (length > 2048) throw Object.assign(new Error('Request too large.'), { status: 413 });
-    chunks.push(chunk);
-  }
-  const raw = Buffer.concat(chunks).toString('utf8');
+  const raw = await new Promise((resolve, reject) => {
+    const chunks = [];
+    let length = 0;
+    const finish = (error) => {
+      clearTimeout(timer);
+      req.off('data', onData);
+      req.off('end', onEnd);
+      req.off('aborted', onAborted);
+      req.off('error', onError);
+      if (error) {
+        // Drain until the caller sends Connection: close, without retaining more body data.
+        req.once('error', () => {});
+        req.resume();
+        reject(error);
+      } else resolve(Buffer.concat(chunks).toString('utf8'));
+    };
+    const onData = chunk => {
+      length += chunk.length;
+      if (length > 2048) return finish(Object.assign(new Error('Request too large.'), { status: 413 }));
+      chunks.push(chunk);
+    };
+    const onEnd = () => finish();
+    const onAborted = () => finish(Object.assign(new Error('Request aborted.'), { status: 400 }));
+    const onError = error => finish(error);
+    const timer = setTimeout(() => finish(Object.assign(new Error('Login request timed out.'), { status: 408 })), deadlineMs);
+    timer.unref();
+    req.on('data', onData);
+    req.once('end', onEnd);
+    req.once('aborted', onAborted);
+    req.once('error', onError);
+  });
   let body;
   try { body = contentType === 'application/json' ? JSON.parse(raw) : Object.fromEntries(new URLSearchParams(raw)); }
   catch { throw Object.assign(new Error('Invalid request.'), { status: 400 }); }
@@ -119,6 +142,7 @@ export function createGateway(options = {}) {
   const secureCookie = options.secureCookie ?? env.HOME_BROWSER_COOKIE_SECURE !== 'false';
   const cookieName = secureCookie ? '__Host-home_browser' : 'home_browser';
   const sessionTtlMs = Math.max(1, Math.min(options.sessionTtlMs ?? MAX_SESSION_MS, MAX_SESSION_MS));
+  const loginBodyTimeoutMs = Math.max(1, Math.min(options.loginBodyTimeoutMs ?? 10_000, 10_000));
   const now = options.now ?? Date.now;
   const sessions = new Map();
   const clientSockets = new Set();
@@ -225,7 +249,10 @@ export function createGateway(options = {}) {
     delete upstreamResponse.headers['access-control-allow-credentials'];
   });
   proxy.on('error', (error, req, res) => {
-    if (res instanceof http.ServerResponse) reply(res, 502, { error: 'The home browser is starting or unavailable.' });
+    if (res instanceof http.ServerResponse) {
+      if (res.headersSent) res.destroy();
+      else reply(res, 502, { error: 'The home browser is starting or unavailable.' });
+    }
     else if (res && !res.destroyed) res.destroy();
   });
 
@@ -241,7 +268,7 @@ export function createGateway(options = {}) {
     delete req.headers['x-forwarded-for'];
   }
 
-  const server = http.createServer({ maxHeaderSize: 16 * 1024, requestTimeout: 15_000, headersTimeout: 10_000 }, async (req, res) => {
+  const server = http.createServer({ maxHeaderSize: 16 * 1024, requestTimeout: 300_000, headersTimeout: 10_000 }, async (req, res) => {
     const ctx = context(req);
     if (!ctx) return reply(res, 421, { error: 'Unrecognized browser host.' });
     if (!req.url?.startsWith('/') || req.url.startsWith('//')) return reply(res, 400, { error: 'Invalid request path.' });
@@ -272,7 +299,7 @@ export function createGateway(options = {}) {
       if (retryAfter) return reply(res, 429, { error: 'Too many attempts. Try again later.' }, { ...cors, 'Retry-After': String(retryAfter) });
       pendingHashes += 1;
       try {
-        const password = await readPassword(req);
+        const password = await readPassword(req, loginBodyTimeoutMs);
         const key = await deriveKey(password, passwordHash.salt, 64, SCRYPT_OPTIONS);
         if (!timingSafeEqual(key, passwordHash.key)) return reply(res, 401, { error: 'Incorrect password.' }, cors);
         if (closing) return reply(res, 503, { error: 'Browser is restarting.' }, cors);
@@ -285,7 +312,7 @@ export function createGateway(options = {}) {
         sessions.set(id, { expiresAt: now() + sessionTtlMs, sockets: new Set(), timer });
         return reply(res, 200, { authenticated: true }, { ...cors, 'Set-Cookie': cookie(signedToken(id), Math.ceil(sessionTtlMs / 1000)) });
       } catch (error) {
-        return reply(res, error.status || 400, { error: 'Invalid login request.' }, cors);
+        return reply(res, error.status || 400, { error: 'Invalid login request.' }, { ...cors, Connection: 'close' });
       } finally { pendingHashes -= 1; }
     }
     if (pathname === '/auth/logout' && req.method === 'POST') {
@@ -302,7 +329,7 @@ export function createGateway(options = {}) {
     if (pathname === '/auth/session' && req.method === 'GET') return reply(res, 200, { authenticated: true, expiresAt: session.expiresAt }, cors);
     if (pathname.startsWith('/auth/')) return reply(res, 404, { error: 'Not found.' }, cors);
     if (/^\/(?:json|devtools)(?:\/|$)/i.test(pathname)) return reply(res, 404, { error: 'Not found.' });
-    if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method) && !originAllowed(req, ctx)) return reply(res, 403, { error: 'Origin denied.' });
+    if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method) && req.headers.origin !== ctx.origin) return reply(res, 403, { error: 'Origin denied.' });
     prepareProxy(req);
     proxy.web(req, res);
   });
@@ -315,7 +342,7 @@ export function createGateway(options = {}) {
   server.on('upgrade', (req, socket, head) => {
     const deny = code => { socket.end(`HTTP/1.1 ${code} ${code === 401 ? 'Unauthorized' : 'Forbidden'}\r\nConnection: close\r\nContent-Length: 0\r\n\r\n`); };
     const ctx = context(req);
-    if (!ctx || !originAllowed(req, ctx) || !req.url?.startsWith('/') || req.url.startsWith('//')) return deny(403);
+    if (!ctx || req.headers.origin !== ctx.origin || !req.url?.startsWith('/') || req.url.startsWith('//')) return deny(403);
     const pathname = new URL(req.url, ctx.origin).pathname;
     if (/^\/(?:auth|json|devtools)(?:\/|$)/i.test(pathname)) return deny(403);
     const session = getSession(req);
