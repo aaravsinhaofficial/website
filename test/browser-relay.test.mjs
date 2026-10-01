@@ -420,6 +420,22 @@ test('desktop rewrite marker preserves application queries and rejects other ser
   assert.equal(desktop.received.length, before);
 });
 
+test('preserved public URLs strip Vercel routing markers while retaining application queries', async t => {
+  for (const [base, marker, relayOptions] of [
+    [BASE, '__browser_relay_path', {}],
+    [DESKTOP_BASE, '__desktop_relay_path', DESKTOP_OPTIONS],
+  ]) {
+    const service = await fixture(t, { relayOptions });
+    assert.equal((await service.request(`${base}/auth/status?${marker}=auth%2Fstatus`)).status, 200);
+    assert.equal(service.received.at(-1).url, `${base}/auth/status`);
+    await service.request(`${base}/api/files?${marker}=api%2Ffiles&path=Documents%2Fnotes&sort=name`);
+    assert.equal(service.received.at(-1).url, `${base}/api/files?path=Documents%2Fnotes&sort=name`);
+    // A caller-supplied/duplicate marker cannot override an already explicit route.
+    await service.request(`${base}/auth/status?${marker}=..%2Foutside&${marker}=other`);
+    assert.equal(service.received.at(-1).url, `${base}/auth/status`);
+  }
+});
+
 test('desktop response cookies and redirects cannot affect the browser session', async t => {
   const desktop = await fixture(t, { relayOptions: DESKTOP_OPTIONS });
   for (const pathname of ['redirect', 'root-redirect']) {
