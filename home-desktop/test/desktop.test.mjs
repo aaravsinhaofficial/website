@@ -161,9 +161,11 @@ test('untrusted hosts, origins, cookie ambiguity, and paths are rejected', async
   assert.equal((await f.request('/auth/status', { headers: { Origin: 'https://aaravsinha.dev.evil.example' } })).status, 403);
   assert.equal((await f.request('/auth/status', { headers: { 'X-Forwarded-Host': 'evil.example' } })).status, 403);
   assert.equal((await f.login({ headers: { Origin: undefined } })).status, 403);
-  for (const path of ['/auth/status', '/desktop/session-other/auth/status', '/desktop/session/../auth/status', '/desktop/session/%2e%2e/auth/status', '/desktop/session//auth/status', '/desktop/session/auth/status?target=localhost']) {
+  for (const path of ['/auth/status', '/desktop/session-other/auth/status', '/desktop/session/../auth/status', '/desktop/session/%2e%2e/auth/status', '/desktop/session//auth/status']) {
     assert.equal((await f.request(path, { rawPath: true })).status, 404, path);
   }
+  assert.equal((await f.request('/auth/status?harmless=1')).status, 200);
+  assert.equal(await rejectedWebsocket(f.websocket(undefined, { path: '/websockify?target=external.example:5900' })), 401);
   const login = await f.login({ headers: { Origin: 'https://aaravsinha.dev' } });
   assert.equal(login.status, 200);
   assert.equal((await f.request('/auth/status', { headers: { Cookie: `${login.cookie}; ${login.cookie}` } })).data.authenticated, false);
@@ -173,10 +175,10 @@ test('untrusted hosts, origins, cookie ambiguity, and paths are rejected', async
   assert.equal(local.status, 200);
 });
 
-test('authenticated binary traffic reaches only the fixed local VNC bridge and logout closes it', async t => {
+test('binary traffic ignores query targets, reaches only local VNC, and logout closes it', async t => {
   const f = await fixture(t);
   const login = await f.login();
-  const ws = f.websocket(login.cookie);
+  const ws = f.websocket(login.cookie, { path: '/websockify?target=external.example:5900&token=untrusted' });
   const banner = once(ws, 'message');
   await once(ws, 'open');
   const [hello, binary] = await banner;

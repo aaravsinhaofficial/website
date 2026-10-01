@@ -1,0 +1,14 @@
+Home Desktop includes noVNC 1.7.0, copyright the noVNC authors.
+The noVNC core is licensed under the Mozilla Public License 2.0.
+Unmodified upstream source: https://github.com/novnc/noVNC/tree/v1.7.0
+Pinned source package: https://www.npmjs.com/package/@novnc/novnc/v/1.7.0
+
+License overview: /desktop/novnc-LICENSE.txt
+Full license texts and authors: /desktop/licenses/
+  LICENSE.MPL-2.0
+  LICENSE.BSD-2-Clause
+  LICENSE.BSD-3-Clause
+  LICENSE.OFL-1.1
+  novnc-AUTHORS.txt
+
+The generated bundle also retains included third-party license notices.

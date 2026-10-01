@@ -136,9 +136,13 @@ export function createDesktopGateway(options = {}) {
   }
 
   function route(req) {
-    if (typeof req.url !== 'string' || !req.url.startsWith(`${DESKTOP_BASE_PATH}/`) ||
-        /[%\\?#\u0000-\u0020\u007f]/.test(req.url)) return null;
-    const suffix = req.url.slice(DESKTOP_BASE_PATH.length);
+    if (typeof req.url !== 'string') return null;
+    // Hosting rewrites may append routing parameters. They never select a
+    // destination or carry authentication here; only the raw pathname routes.
+    const pathname = req.url.split('?', 1)[0];
+    if (!pathname.startsWith(`${DESKTOP_BASE_PATH}/`) ||
+        /[%\\#\u0000-\u0020\u007f]/.test(pathname)) return null;
+    const suffix = pathname.slice(DESKTOP_BASE_PATH.length);
     return ['/auth/status', '/auth/login', '/auth/logout', '/health', '/websockify'].includes(suffix) ? suffix : null;
   }
 
