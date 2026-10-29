@@ -17,14 +17,15 @@ const ALLOWED_CITATION_PATTERNS = [
   /github\.com\/aaravsinhaofficial/i,
   /linkedin\.com\/in\/aaravsinha1/i,
   /scholar\.google\.com\/citations\?user=pQ0MDVw/i,
+  /openreview\.net\/forum\?id=gYfT1Vxlwy/i,
   /openreview\.net\/forum\?id=e0pSqIqwXO/i,
   /openreview\.net\/pdf\?id=e0pSqIqwXO/i,
   /openreview\.net\/forum\?id=gKQRv49qtM/i,
+  /biorxiv\.org\/content\/10\.64898\/2026\.10\.09\.757963/i,
+  /doi\.org\/10\.64898\/2026\.10\.09\.757963/i,
   /doi\.org\/10\.21203\/rs\.3\.rs-9841779\/v1/i,
   /researchsquare\.com\/article\/rs-9841779/i,
   /jmlr\.org\/tmlr/i,
-  /genbio-workshop\.github\.io/i,
-  /sites\.google\.com\/view\/rlxf-icml2026/i,
   /eon\.systems/i,
   /x\.com\/alexwg\/status\/2030217301929132323/i,
   /x\.com\/elonmusk\/status\/2030688922464825499/i,
@@ -34,19 +35,19 @@ const ALLOWED_CITATION_PATTERNS = [
 ];
 const PAPER_FILES = [
   {
+    title: 'Predictive Grid Cell Coding Does Not Require Explicit Planning',
+    path: '/data/predictive-grid-cell-coding.pdf',
+    aliases: ['predictive grid', 'grid cell coding', 'explicit planning', 'symmetry and geometry']
+  },
+  {
     title: 'Auditing Closed-Loop Learning in Recurrent Neural Networks: Reproduction, Robustness, and Generalization',
     path: '/data/auditing-closed-loop-learning.pdf',
     aliases: ['auditing closed-loop learning', 'closed-loop rnn audit', 'reproducibility', 'tmlr']
   },
   {
     title: 'MapShift: Controlled Post-Intervention Evaluation for Embodied World Models',
-    path: '/data/mapshift-controlled-post-intervention-evaluation.pdf',
-    aliases: ['mapshift', 'controlled post-intervention', 'embodied world models', 'rlxf']
-  },
-  {
-    title: 'Can AI Scientists Discover Neural Mechanisms? Evaluating Agentic Biological Discovery in a Digital Fly',
-    path: '/data/ai-scientists-neural-mechanisms-digital-fly.pdf',
-    aliases: ['ai scientists', 'digital fly', 'agentic biological discovery', 'genbio']
+    path: '/data/mapshift-neurips-2026.pdf',
+    aliases: ['mapshift', 'controlled post-intervention', 'embodied world models']
   },
   {
     title: 'Credit Bandwidth Lower Bounds for Diffusive Cortical Learning',
@@ -74,9 +75,9 @@ Previous research:
 - Student research assistant at the UC Davis Center for Neuroscience.
 
 Detailed research and paper context:
+- "Predictive Grid Cell Coding Does Not Require Explicit Planning" by Aarav Sinha, Oluwajomiloju C. Fasehun, and William T. Redman, bioRxiv preprint, 2026, accepted for an oral presentation at the NeurIPS 2026 Symmetry and Geometry in Neural Representations Workshop. This study finds predictive grid coding in rodent medial entorhinal cortex recordings and path-integrating RNNs trained without a predictive objective. Predictive units show future path-dependence even at the same spatial position, and band-like units are enriched for predictive tuning. Evidence during sleep in one recording further suggests that predictive grid coding may arise from grid circuit dynamics without explicit planning. When explaining it, distinguish predictive neural representations from a requirement for explicit prediction or planning. Preprint: https://www.biorxiv.org/content/10.64898/2026.10.09.757963v1.
 - "Auditing Closed-Loop Learning in Recurrent Neural Networks: Reproduction, Robustness, and Generalization" by Aarav Sinha, published in Transactions on Machine Learning Research (TMLR), 2026. This claim-level reproducibility audit tests closed-loop RNN learning across independent implementation, seed variation, protocol perturbations, coupled-system stability diagnostics, architecture changes, and task transfer. Across 675 paired runs, the transient open-loop deployed-loss peak and coupled-stability signature reproduce reliably, while persistent final-loss divergence and task transfer are more conditional. When explaining it, emphasize why closed-loop learning is hard to reproduce: an agent's actions alter its future inputs, so the relevant dynamics belong to the coupled agent-environment system rather than the RNN alone.
-- "MapShift: Controlled Post-Intervention Evaluation for Embodied World Models" by Aarav Sinha, accepted to the ICML 2026 RLxF Workshop: Reinforcement Learning from World Feedback. This paper introduces an executable benchmark for evaluating embodied world models after controlled environment interventions. It separates three failure modes: stale map reuse, failure to update beliefs after a change, and weak post-change planning. The contribution is a controlled post-intervention evaluation setup with matched environment changes, so model behavior can be attributed to world-model updating and planning rather than incidental task variation. When explaining it, emphasize embodied agents, world models, intervention-controlled evaluation, and why stale internal maps are a problem.
-- "Can AI Scientists Discover Neural Mechanisms? Evaluating Agentic Biological Discovery in a Digital Fly" by Aarav Sinha, accepted to the ICML 2026 GenBio Workshop: Generative and Agentic AI for Biology. This paper proposes a pilot benchmark for agentic biological discovery inside a digital fly system. It frames mechanism discovery as a budgeted loop: form hypotheses, choose experiments, observe outcomes, update beliefs, and make held-out counterfactual predictions. The core question is whether an AI scientist can discover neural mechanisms rather than merely summarize biological text. When explaining it, highlight digital organisms, Drosophila, experiment-planning agents, mechanism discovery, and counterfactual prediction.
+- "MapShift: Controlled Post-Intervention Evaluation for Embodied World Models" by Aarav Sinha, NeurIPS Poster (2026). This paper introduces an executable benchmark for evaluating embodied world models after controlled environment interventions. It separates three failure modes: stale map reuse, failure to update beliefs after a change, and weak post-change planning. The contribution is a controlled post-intervention evaluation setup with matched environment changes, so model behavior can be attributed to world-model updating and planning rather than incidental task variation. When explaining it, emphasize embodied agents, world models, intervention-controlled evaluation, and why stale internal maps are a problem.
 - "Credit Bandwidth Lower Bounds for Diffusive Cortical Learning" by Aarav Sinha, Research Square preprint, 2026. This theory paper studies recurrent credit assignment on cortical graphs under communication constraints. It derives graph-spectral lower bounds for low-bandwidth diffuse and cell-type-specific feedback. The broad motivation is that biological brains cannot broadcast dense backpropagation-like errors everywhere, so cortical learning may be constrained by the bandwidth and geometry of feedback pathways. When explaining it, focus on credit assignment, cortical graph structure, spectral lower bounds, feedback bandwidth, and biologically plausible learning.
 - "Using Deep Reinforcement Learning to Understand Odor Plume Tracking in Walking and Flying Insects" by Aarav Sinha and Satpreet H. Singh, NeurIPS AI for Science Workshop, 2025. This work trains biologically inspired RNN reinforcement learning agents to navigate toward odor sources, then compares learned strategies in walking versus flying settings. Walking agents develop fine-scale orientation strategies and compact neural representations, while flying agents use broader sweeping turns and higher-dimensional dynamics. When explaining it, connect deep RL to computational neuroscience: the agents are used as scientific models for understanding insect navigation strategies.
 - "Towards Embodied Brain Emulations: A Drosophila Connectome-Constrained Brain Model Accurately Predicts Neural Activity and Controls Behavior in a Virtual Environment" by Scott Harris, Aarav Sinha, Susanna Yaeger-Weiss, Vincent Louvel, and Philip Shiu, Society for Neuroscience, 2025 poster. This poster describes a connectome-constrained Drosophila brain model that both predicts neural activity and controls behavior in a virtual environment. Aarav contributed to the brain embodiment component at Eon Systems: coupling a connectome-constrained neural model to a virtual fly body in a closed brain-body-environment loop. When explaining it, emphasize embodied brain emulation, Drosophila connectomics, virtual behavior, and the challenge of making a wiring diagram control an agent.
@@ -314,11 +315,11 @@ function getProfileFallbackForQuestion(question) {
   const normalizedQuestion = question.toLowerCase();
 
   if (normalizedQuestion.indexOf('mapshift') !== -1) {
-    return 'Based on Aarav\'s site context, MapShift is an accepted ICML 2026 RLxF Workshop paper about controlled post-intervention evaluation for embodied world models. It introduces an executable benchmark that separates stale map reuse, belief-update failures, and post-change planning weaknesses across matched environment interventions.';
+    return 'Based on Aarav\'s site context, MapShift is a NeurIPS Poster (2026) about controlled post-intervention evaluation for embodied world models. It introduces an executable benchmark that separates stale map reuse, belief-update failures, and post-change planning weaknesses across matched environment interventions.';
   }
 
-  if (normalizedQuestion.indexOf('ai scientist') !== -1 || normalizedQuestion.indexOf('digital fly') !== -1 || normalizedQuestion.indexOf('genbio') !== -1) {
-    return 'Based on Aarav\'s site context, "Can AI Scientists Discover Neural Mechanisms?" is an accepted ICML 2026 GenBio Workshop paper. It frames discovery in a digital fly as a budgeted hypothesis-experiment-update loop and evaluates whether agents can make held-out counterfactual predictions about neural mechanisms.';
+  if (normalizedQuestion.indexOf('predictive grid') !== -1 || normalizedQuestion.indexOf('grid cell coding') !== -1 || normalizedQuestion.indexOf('explicit planning') !== -1 || normalizedQuestion.indexOf('symmetry and geometry') !== -1) {
+    return 'Based on Aarav\'s site context, "Predictive Grid Cell Coding Does Not Require Explicit Planning" is a 2026 bioRxiv preprint by Aarav Sinha, Oluwajomiloju C. Fasehun, and William T. Redman, accepted for an oral presentation at the NeurIPS 2026 Symmetry and Geometry in Neural Representations Workshop. Rodent recordings and path-integrating RNNs show predictive grid coding without an explicit predictive training objective, suggesting that this coding may emerge from grid circuit dynamics without explicit planning.';
   }
 
   if (normalizedQuestion.indexOf('credit bandwidth') !== -1 || normalizedQuestion.indexOf('diffusive cortical') !== -1) {
@@ -395,14 +396,14 @@ function shouldAttachPaperFiles(messages) {
     'figure',
     'figures',
     'mapshift',
-    'ai scientists',
-    'digital fly',
+    'predictive grid',
+    'grid cell coding',
+    'explicit planning',
+    'symmetry and geometry',
     'credit bandwidth',
     'odor plume',
     'drosophila',
-    'sfn',
-    'rlxf',
-    'genbio'
+    'sfn'
   ];
 
   return paperTriggers.some(function (trigger) {
