@@ -9,14 +9,19 @@
     "test:browser": "node --test test/*.test.mjs",
     "test:browser-relay": "node --test test/browser-relay.test.mjs",
     "build:desktop": "node scripts/build-desktop.mjs",
-    "test:desktop": "node --test home-desktop/test/*.test.mjs"
+    "test:desktop": "node --test home-desktop/test/*.test.mjs",
+    "build:rsi": "node rsi-dashboard/build.mjs"
   },
   "dependencies": {
     "@novnc/novnc": "1.7.0",
+    "@vercel/blob": "2.8.2",
     "http-proxy-3": "2.0.1",
     "ws": "8.22.0"
   },
   "devDependencies": {
-    "esbuild": "0.28.2"
+    "esbuild": "0.28.2",
+    "lucide-react": "1.31.0",
+    "react": "19.2.6",
+    "react-dom": "19.2.6"
   }
 }
