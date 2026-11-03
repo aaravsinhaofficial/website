@@ -1,5 +1,12 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "redirects": [
+    {
+      "source": "/rsi-dashboard",
+      "destination": "https://rsi-2027-aarav-workspace.bravemap66.chatgpt.site/",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     {
       "source": "/desktop/session/",
