@@ -5,6 +5,11 @@
       "source": "/rsi-dashboard",
       "destination": "https://rsi-2027-aarav-workspace.bravemap66.chatgpt.site/",
       "permanent": false
+    },
+    {
+      "source": "/rsi-dashboard/",
+      "destination": "https://rsi-2027-aarav-workspace.bravemap66.chatgpt.site/",
+      "permanent": false
     }
   ],
   "rewrites": [
