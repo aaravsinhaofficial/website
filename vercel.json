@@ -1,18 +1,14 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "redirects": [
+  "rewrites": [
     {
       "source": "/rsi-dashboard",
-      "destination": "https://rsi-2027-aarav-workspace.bravemap66.chatgpt.site/",
-      "permanent": false
+      "destination": "/rsi-dashboard/index.html"
     },
     {
       "source": "/rsi-dashboard/",
-      "destination": "https://rsi-2027-aarav-workspace.bravemap66.chatgpt.site/",
-      "permanent": false
-    }
-  ],
-  "rewrites": [
+      "destination": "/rsi-dashboard/index.html"
+    },
     {
       "source": "/desktop/session/",
       "destination": "/api/desktop-relay?__desktop_relay_path="
@@ -43,6 +39,27 @@
     }
   ],
   "headers": [
+    {
+      "source": "/rsi-dashboard/:path*",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "no-referrer"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; object-src 'none'; form-action 'self'"
+        }
+      ]
+    },
     {
       "source": "/browser/:path*",
       "headers": [
