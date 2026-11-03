@@ -1,11 +1,19 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { BlobPreconditionFailedError, get, put } from "@vercel/blob";
 
-// Hash of the separate API capability derived from the owner's random workspace key.
-const verifier = Buffer.from("0664862d681781387b73af4f47013ae9045062f5b7ab117ceb0d31c529efadd3", "hex");
 const maxCiphertextLength = 3_500_000;
+const lock = readLock();
 
-function authorized(header) {
+function readLock() {
+  try {
+    const config = JSON.parse(process.env.RSI_WORKSPACE_LOCK ?? "null");
+    if (config && typeof config.verifier === "string" && /^[0-9a-f]{64}$/.test(config.verifier) && validEnvelope(config.wrappedKey)) {
+      return {verifier: Buffer.from(config.verifier, "hex"), wrappedKey: config.wrappedKey};
+    }
+  } catch { /* Missing or invalid configuration keeps the workspace locked. */ }
+  return null;
+}
+function authorized(header, verifier) {
   const match = typeof header === "string" && /^Bearer ([A-Za-z0-9_-]{43})$/.exec(header);
   return Boolean(match && timingSafeEqual(createHash("sha256").update(match[1]).digest(), verifier));
 }
@@ -17,7 +25,8 @@ function validEnvelope(box) {
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "private, no-store");
   res.setHeader("X-Content-Type-Options", "nosniff");
-  if (!authorized(req.headers.authorization)) return res.status(401).json({error:"Locked"});
+  if (!lock) return res.status(503).json({error:"Workspace unlock is unavailable."});
+  if (!authorized(req.headers.authorization, lock.verifier)) return res.status(401).json({error:"Locked"});
   if (!["GET","PUT"].includes(req.method)) {
     res.setHeader("Allow","GET, PUT");
     return res.status(405).json({error:"Method not allowed"});
@@ -34,7 +43,9 @@ export default async function handler(req, res) {
       const result = await read();
       if (!result) return res.status(part === "seed" ? 404 : 200).json({box:null,tag:null});
       const box = await new Response(result.stream).json();
-      return res.status(200).json({box,tag:result.blob.etag});
+      const state = {box, tag:result.blob.etag};
+      if (part === "seed") state.wrappedKey = lock.wrappedKey;
+      return res.status(200).json(state);
     }
     if (req.headers.origin && new URL(req.headers.origin).host !== req.headers.host) return res.status(403).json({error:"Origin mismatch"});
     if (!req.headers["content-type"]?.startsWith("application/json")) return res.status(415).json({error:"Use JSON"});

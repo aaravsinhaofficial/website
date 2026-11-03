@@ -9,6 +9,7 @@ export type Seed = {
 };
 type Box = {version: 1; iv: string; data: string};
 type Access = {key: CryptoKey; token: string};
+type Unlock = {wrappingKey: CryptoKey; token: string};
 type CloudState = {box: Box | null; tag: string | null};
 const enc = new TextEncoder();
 const dec = new TextDecoder();
@@ -22,16 +23,19 @@ function to64(bytes: Uint8Array) {
   for(let i=0;i<bytes.length;i+=16384)result+=String.fromCharCode(...bytes.subarray(i,i+16384));
   return btoa(result);
 }
-async function accessFromKey(input: string): Promise<Access> {
-  const cleaned=input.trim();
-  if (!/^[A-Za-z0-9_-]{43}$/.test(cleaned)) throw new Error("Enter the 43-character workspace key.");
-  const raw=from64(cleaned);
-  const key=await crypto.subtle.importKey("raw",raw,"AES-GCM",false,["encrypt","decrypt"]);
-  const signing=await crypto.subtle.importKey("raw",raw,{name:"HMAC",hash:"SHA-256"},false,["sign"]);
-  const signature=await crypto.subtle.sign("HMAC",signing,enc.encode("rsi-workspace/sync/v1"));
-  const token=to64(new Uint8Array(signature)).replaceAll("+","-").replaceAll("/","_").replace(/=+$/,"");
-  raw.fill(0);
-  return {key,token};
+async function unlockFromPin(input: string): Promise<Unlock> {
+  const pin = input.trim();
+  if (!/^[0-9]{8}$/.test(pin)) throw new Error("Enter your 8-digit workspace key.");
+  const material = await crypto.subtle.importKey("raw", enc.encode(pin), "PBKDF2", false, ["deriveBits"]);
+  // The first half wraps the existing data key. Only the second half is sent to the server.
+  const bits = new Uint8Array(await crypto.subtle.deriveBits({
+    name: "PBKDF2", hash: "SHA-256", salt: from64("HkCN6Islq94MQwS++jm84g=="), iterations: 600_000,
+  }, material, 512));
+  try {
+    const wrappingKey = await crypto.subtle.importKey("raw", bits.subarray(0, 32), "AES-GCM", false, ["unwrapKey"]);
+    const token = to64(bits.subarray(32)).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
+    return {wrappingKey, token};
+  } finally { bits.fill(0); }
 }
 async function decrypt<T>(key: CryptoKey, box: Box, context: string): Promise<T> {
   if(box.version!==1)throw new Error("This workspace format is unsupported.");
@@ -74,13 +78,28 @@ export async function forget() { await remember(null); }
 export class Vault {
   constructor(readonly seed: Seed, private access: Access) {}
   static async open(input:string|Access, persist=false) {
-    const access=typeof input==="string"?await accessFromKey(input):input;
-    const response=await fetch(api+"?part=seed",{cache:"no-store",credentials:"omit",referrerPolicy:"no-referrer",headers:{Authorization:"Bearer "+access.token}});
-    if(response.status===401)throw new Error("That key did not unlock this workspace.");
+    const login = typeof input === "string" ? await unlockFromPin(input) : input;
+    const response=await fetch(api+"?part=seed",{cache:"no-store",credentials:"omit",referrerPolicy:"no-referrer",headers:{Authorization:"Bearer "+login.token}});
+    if(response.status===401){
+      if (typeof input !== "string") {
+        await forget().catch(() => {});
+        throw new Error("Enter your current workspace key to unlock this browser.");
+      }
+      throw new Error("That key did not unlock this workspace.");
+    }
     if(!response.ok)throw new Error("The private workspace could not be loaded. Please try again.");
-    const {box}=await response.json() as {box:Box};
+    const {box,wrappedKey}=await response.json() as {box:Box;wrappedKey:Box};
+    let access:Access;
     let seed:Seed;
-    try { seed=await decrypt<Seed>(access.key,box,"rsi-workspace/seed/v1"); }
+    try {
+      if ("wrappingKey" in login) {
+        const key = await crypto.subtle.unwrapKey("raw", from64(wrappedKey.data), login.wrappingKey, {
+          name: "AES-GCM", iv: from64(wrappedKey.iv), additionalData: enc.encode("rsi-workspace/data-key/v2"),
+        }, "AES-GCM", false, ["encrypt", "decrypt"]);
+        access = {key, token: login.token};
+      } else { access = login; }
+      seed=await decrypt<Seed>(access.key,box,"rsi-workspace/seed/v1");
+    }
     catch { throw new Error("That key did not unlock this workspace."); }
     if(seed.schema!==1||!Array.isArray(seed.inventory)||!Array.isArray(seed.records))throw new Error("This workspace could not be read.");
     if(persist){try{await remember(access);}catch{ /* Private browsing can disable remembering a key. */ }}

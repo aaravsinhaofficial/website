@@ -39,7 +39,7 @@ function App() {
     <div className="vault-figure" aria-hidden="true"></div>
     <div className="vault-inner"><div className="eyebrow"><LockKeyhole size={13}/>Private application workspace</div>
       <h1>RSI 2027 dashboard</h1><p>Enter your workspace key to open your application.</p>
-      <form onSubmit={unlock}><label className="field">Workspace key<input value={key} onChange={e=>setKey(e.target.value)} required type="password" autoComplete="off" autoCapitalize="none" spellCheck={false} placeholder="Paste your private key"/></label>
+      <form onSubmit={unlock}><label className="field">Workspace key<input value={key} onChange={e=>setKey(e.target.value)} required type="password" inputMode="numeric" autoComplete="current-password" autoCapitalize="none" spellCheck={false} placeholder="Enter your 8-digit key"/></label>
         <label className="remember"><input type="checkbox" checked={persist} onChange={e=>setPersist(e.target.checked)}/>Remember this browser</label>
         {error&&<div className="error-message" role="alert">{error}</div>}
         <button type="submit" className="primary" disabled={busy}>{busy?"Unlocking…":"Unlock dashboard"}<ArrowRight size={15}/></button>
