@@ -2,6 +2,14 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
+      "source": "/cyfalls-results",
+      "destination": "https://cyfalls-results-2026.bravemap66.chatgpt.site/"
+    },
+    {
+      "source": "/cyfalls-results/",
+      "destination": "https://cyfalls-results-2026.bravemap66.chatgpt.site/"
+    },
+    {
       "source": "/rsi-dashboard",
       "destination": "/rsi-dashboard/index.html"
     },
